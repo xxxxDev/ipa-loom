@@ -1,0 +1,10 @@
+IPA Loom: ./ipa-loom.command [Store URL | App ID | local.ipa]
+  --setup         First-run setup
+  --doctor        Read-only tools/model check
+  --recover       Roll back pending setup
+  --check-build   Build without Apple login, then clean
+  --clean-runs [--apply]  Remove run outputs
+  --reset [--apply]       Remove runtime and Keychain item
+  --login         Refresh authentication
+  --suffix TAG    Output filename label
+  --forget-keychain  Forget a legacy user-chosen key

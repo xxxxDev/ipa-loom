@@ -1,0 +1,286 @@
+--- a/cmd/common.go
++++ b/cmd/common.go
+@@ -6,6 +6,7 @@
+ 	"io"
+ 	"os"
+ 	"path/filepath"
++	"strconv"
+ 	"strings"
+ 
+ 	"github.com/byteness/keyring"
+@@ -60,10 +61,26 @@
+ 
+ // newKeychain returns a new keychain instance.
+ func newKeychain(stateDirectory string, interactive bool) keychain.Keychain {
++	if descriptor := os.Getenv("DEV_IPA_PASSPHRASE_FD"); descriptor != "" {
++		fd, err := strconv.Atoi(descriptor)
++		if err != nil || fd < 3 {
++			panic("invalid private passphrase descriptor")
++		}
++		file := os.NewFile(uintptr(fd), "private-passphrase")
++		if file == nil {
++			panic("private passphrase descriptor unavailable")
++		}
++		data, readErr := io.ReadAll(io.LimitReader(file, 4097))
++		_ = file.Close()
++		if readErr != nil || len(data) < 12 || len(data) > 4096 {
++			panic("invalid private passphrase input")
++		}
++		keychainPassphrase = string(data)
++		clear(data)
++	}
++
+ 	ring := util.Must(openKeyring(keyring.Config{
+ 		AllowedBackends: []keyring.BackendType{
+-			keyring.KeychainBackend,
+-			keyring.SecretServiceBackend,
+ 			keyring.FileBackend,
+ 		},
+ 		ServiceName:              KeychainServiceName,
+@@ -75,6 +92,9 @@
+ 			}
+ 
+ 			if keychainPassphrase != "" {
++				if len(keychainPassphrase) < 12 {
++					return "", errors.New("passphrase must contain at least 12 bytes")
++				}
+ 				return keychainPassphrase, nil
+ 			}
+ 
+@@ -84,6 +104,17 @@
+ 				return "", fmt.Errorf("failed to read password: %w", err)
+ 			}
+ 
++			if len(password) < 12 {
++				return "", errors.New("passphrase must contain at least 12 bytes; empty passwords are not allowed")
++			}
++			confirmation, err := readPrompt("confirm file passphrase: ", true)
++			if err != nil {
++				return "", err
++			}
++			if password != confirmation {
++				return "", errors.New("passphrase confirmation differs")
++			}
++			keychainPassphrase = password
+ 			return password, nil
+ 		},
+ 	}))
+--- a/cmd/state_directory.go
++++ b/cmd/state_directory.go
+@@ -2,60 +2,19 @@
+ 
+ import (
+ 	"fmt"
++	"github.com/majd/ipatool/v2/pkg/util/operatingsystem"
+ 	"path/filepath"
+-	"strings"
+-
+-	"github.com/majd/ipatool/v2/pkg/util/operatingsystem"
+ )
+ 
+-// prepareStateDirectory resolves and migrates session storage before it is opened.
+-func prepareStateDirectory(os operatingsystem.OperatingSystem, homeDirectory string) (string, error) {
+-	legacyDirectory := filepath.Join(homeDirectory, ConfigDirectoryName)
+-	stateDirectory := legacyDirectory
+-
+-	for _, variable := range []string{"XDG_STATE_HOME", "XDG_DATA_HOME"} {
+-		if base := os.Getenv(variable); filepath.IsAbs(base) {
+-			stateDirectory = filepath.Join(base, "ipatool")
+-
+-			break
+-		}
++// Local lab build: do not migrate or reuse an existing personal session.
++func prepareStateDirectory(os operatingsystem.OperatingSystem, _ string) (string, error) {
++	base := os.Getenv("XDG_STATE_HOME")
++	if !filepath.IsAbs(base) {
++		return "", fmt.Errorf("isolated build requires absolute XDG_STATE_HOME")
+ 	}
+-
+-	info, err := os.Stat(legacyDirectory)
+-	if err != nil && !os.IsNotExist(err) {
+-		return "", fmt.Errorf("could not read legacy state directory metadata: %w", err)
++	directory := filepath.Join(base, "ipatool")
++	if err := os.MkdirAll(directory, 0700); err != nil {
++		return "", err
+ 	}
+-
+-	if err == nil {
+-		if !info.IsDir() {
+-			return "", fmt.Errorf("legacy state path is not a directory: %s", legacyDirectory)
+-		}
+-		// Never merge sessions or move a directory into itself. Keeping the legacy
+-		// directory also preserves authentication when migration is unavailable.
+-		relative, err := filepath.Rel(legacyDirectory, stateDirectory)
+-		if err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+-			return legacyDirectory, nil
+-		}
+-
+-		if _, err := os.Stat(stateDirectory); err == nil || !os.IsNotExist(err) {
+-			return legacyDirectory, nil
+-		}
+-
+-		if err := os.MkdirAll(filepath.Dir(stateDirectory), 0700); err != nil {
+-			return legacyDirectory, nil
+-		}
+-		// Rename keeps cookies and encrypted credentials together, with their
+-		// existing permissions. Cross-filesystem moves fall back to legacy storage.
+-		if err := os.Rename(legacyDirectory, stateDirectory); err != nil {
+-			return legacyDirectory, nil
+-		}
+-
+-		return stateDirectory, nil
+-	}
+-
+-	if err := os.MkdirAll(stateDirectory, 0700); err != nil {
+-		return "", fmt.Errorf("failed to create state directory: %w", err)
+-	}
+-
+-	return stateDirectory, nil
++	return directory, nil
+ }
+--- a/internal/sap/assets/assets.go
++++ b/internal/sap/assets/assets.go
+@@ -106,9 +106,9 @@
+ }
+ 
+ func cacheDirectory() (string, error) {
+-	root, err := os.UserCacheDir()
+-	if err != nil {
+-		return "", fmt.Errorf("find user cache directory: %w", err)
++	root := os.Getenv("DEV_IPA_CACHE")
++	if !filepath.IsAbs(root) {
++		return "", fmt.Errorf("isolated build requires absolute DEV_IPA_CACHE")
+ 	}
+ 
+ 	return filepath.Join(root, "ipatool", "sap", assetCacheDirectory), nil
+--- /dev/null
++++ b/internal/sap/assets/lab_progress.go
+@@ -0,0 +1,77 @@
++package assets
++
++import (
++	"fmt"
++	"io"
++	"os"
++	"path/filepath"
++	"strings"
++	"time"
++)
++
++// Counts only known regular output files, never credentials or network payloads.
++func componentProgress(directory string) (int, int64) {
++	complete := 0
++	var bytes int64
++	for _, spec := range requiredFiles {
++		info, err := os.Lstat(filepath.Join(directory, spec.name))
++		if err != nil || !info.Mode().IsRegular() {
++			continue
++		}
++		bytes += info.Size()
++		if info.Size() == int64(spec.size) {
++			complete++
++		}
++	}
++	return complete, bytes
++}
++
++func progressLine(complete int, bytes int64, elapsed, unchanged time.Duration) string {
++	total := len(requiredFiles)
++	bar := strings.Repeat("#", complete) + strings.Repeat("-", total-complete)
++	line := fmt.Sprintf("Component output [%s] %d/%d | Written %.1f MiB | Elapsed %s", bar, complete, total, float64(bytes)/(1024*1024), elapsed.Round(time.Second))
++	if unchanged >= 30*time.Second {
++		line += fmt.Sprintf(" | No file changes for %s (download or processing may still be active)", unchanged.Round(time.Second))
++	}
++	return line + "; this counts output files, not download percentage"
++}
++
++// Finishes before authentication prompts resume; never captures terminal input.
++func startComponentProgress(directory string, writer io.Writer, interval time.Duration) func(bool) {
++	stop := make(chan bool, 1)
++	done := make(chan struct{})
++	started := time.Now()
++	go func() {
++		defer close(done)
++		ticker := time.NewTicker(interval)
++		defer ticker.Stop()
++		lastCount := -1
++		var lastBytes int64 = -1
++		changed := started
++		emit := func() {
++			count, size := componentProgress(directory)
++			now := time.Now()
++			if count != lastCount || size != lastBytes {
++				changed = now
++				lastCount = count
++				lastBytes = size
++			}
++			fmt.Fprintln(writer, progressLine(count, size, now.Sub(started), now.Sub(changed)))
++		}
++		emit()
++		for {
++			select {
++			case success := <-stop:
++				if success {
++					fmt.Fprintln(writer, "Authentication components are ready and hash-verified; login follows. Watch for the verification-code prompt.")
++				} else {
++					fmt.Fprintln(writer, "Component preparation ended without completing; see the following error.")
++				}
++				return
++			case <-ticker.C:
++				emit()
++			}
++		}
++	}()
++	return func(success bool) { stop <- success; <-done }
++}
+--- a/internal/sap/assets/remote.go
++++ b/internal/sap/assets/remote.go
+@@ -9,6 +9,7 @@
+ 	"net/http"
+ 	"os"
+ 	"path/filepath"
++	"time"
+ )
+ 
+ const (
+@@ -31,6 +32,7 @@
+ }
+ 
+ func resolveRemoteImage(ctx context.Context) (Bundle, error) {
++	fmt.Fprintln(os.Stderr, "Preparing first-login components: connecting to the Apple image source. The verification-code prompt appears afterward.")
+ 	client := &http.Client{}
+ 	remote, err := openRemoteFile(ctx, client)
+ 	if err != nil {
+@@ -59,6 +61,9 @@
+ 	defer os.RemoveAll(workspace)
+ 
+ 	frameworkDirectory := filepath.Join(workspace, "frameworks")
++	finishProgress := startComponentProgress(frameworkDirectory, os.Stderr, 5*time.Second)
++	prepared := false
++	defer func() { finishProgress(prepared) }()
+ 	if err := extractFrameworkFiles(ctx, client, remote, fileSystemEntry, frameworkDirectory); err != nil {
+ 		return Bundle{}, err
+ 	}
+@@ -87,6 +92,7 @@
+ 		return Bundle{}, err
+ 	}
+ 
++	prepared = true
+ 	return bundle, nil
+ }
+ 
+--- a/internal/sap/unicorn/cache_runtime.go
++++ b/internal/sap/unicorn/cache_runtime.go
+@@ -30,9 +30,9 @@
+ 		return runtimePaths{}, err
+ 	}
+ 
+-	cache, err := os.UserCacheDir()
+-	if err != nil {
+-		return runtimePaths{}, fmt.Errorf("locate user cache: %w", err)
++	cache := os.Getenv("DEV_IPA_CACHE")
++	if !filepath.IsAbs(cache) {
++		return runtimePaths{}, fmt.Errorf("isolated build requires absolute DEV_IPA_CACHE")
+ 	}
+ 
+ 	root := filepath.Join(cache, "ipatool", "unicorn", unicornVersion)

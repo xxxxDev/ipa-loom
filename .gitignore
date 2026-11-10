@@ -1,0 +1,36 @@
+# Tests are maintained outside the public source tree.
+/tests/
+/test/
+test_*.py
+*_test.py
+*_test.go
+*.test.*
+*.spec.*
+
+# Local assistant settings and working notes
+.claude/
+CLAUDE.md
+
+# Private runtime and evidence
+.local/
+.runtime/
+.private/
+records/
+logs/
+AGENTS.md
+PROJECT-STATE.md
+.lab.lock
+.env
+.env.*
+.DS_Store
+__pycache__/
+*.pyc
+*.ipa
+*.sinf
+*.supf
+*.supp
+*.bin
+*.capture
+*.recovery
+*.keychain-db
+*.log
