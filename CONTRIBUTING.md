@@ -1,11 +1,22 @@
 # Contributing
 
-Keep changes small and focused. Discuss major workflow or credential-handling changes in an issue before implementing them. Never include credentials, models, apps, framework caches, raw logs, or local test evidence in an issue or pull request.
+Thanks for helping. IPA Loom is a small project, so a short, focused change is the easiest to review.
 
-The test suite and its evidence are maintained privately outside this source repository and are not published. In your pull request, describe the platform and tool versions, how you checked the behavior and failure paths, the results, and anything not verified. Do not claim a fresh-machine test from a configured-machine run. Keep README.md and README.zh-TW.md semantically paired with matching line counts. Only the README has a Traditional Chinese edition; code, comments, command-line messages, images, and all other public project documents use English.
+## Before you start
 
-Use English, single-line commit titles in the form `Area: describe the behavior and reason: files`. Preserve external contributors' own authorship. Do not add generated-by or co-author trailers automatically. Releases use date tags such as `v2026.11.9` (`vYYYY.M.D`, no zero-padding), with English sections New, Changes, Faster, and Fixes only when applicable. Each release bullet has a bold short title and explains the user-visible change without internal filenames or test details.
+- For a bug, open an issue with what you did, what you expected and what happened, plus the version or commit you installed from and your macOS version and architecture.
+- For a larger change or a new feature, open an issue first so we can agree on the approach.
+- For a security problem, follow [SECURITY.md](SECURITY.md) instead.
 
-Run `python3 -B scripts/check_public.py` to check the working directory against `PUBLIC-FILES.txt`. Add each intentional public file to that inventory; keep the private test suite and its fixtures outside the source repository. Public checks cover source inventory, syntax, and release-date format, not runtime behavior. Before a release, review `git diff --cached`, check the index with `python3 -B scripts/check_public.py --staged`, then check the committed tree with `python3 -B scripts/check_public.py --ref HEAD` and record its full commit OID. Follow [the release checklist](docs/RELEASING.md), including manual history and package review. Pushes, tags, and releases require the repository owner's approval. Do not force-push.
+## Development
 
-Validate a proposed tag with `python3 scripts/check_release.py v2026.11.9`. This check does not create a tag or publish anything.
+IPA Loom runs on an Apple Silicon Mac. Double-click `ipa-loom.command`, or run `./ipa-loom.command` in its folder; first use builds the pinned tools and guides setup. The scripts are Python 3 and need no build step.
+
+The project's test suite is maintained separately and is not part of this repository. In your pull request, describe how you checked the change: what you ran, on which macOS version, and what you saw. Do not claim a fresh-machine result from an already-configured machine.
+
+## Guidelines
+
+- Match the style of the code around your change.
+- Keep setup, decryption, verification, and cleanup behavior explicit; do not weaken a safety check or a failure path to make something pass.
+- Text shown to people comes in English and Traditional Chinese: change `README.md` and `README.zh-TW.md` together and keep them the same number of lines. Other documents and command output are in English.
+- Code comments are in English and say why, not what.

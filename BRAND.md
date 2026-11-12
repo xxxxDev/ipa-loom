@@ -1,16 +1,11 @@
 # Brand assets
 
-The IPA Loom logo belongs to [V-AX](https://v-ax.com) and is not included in the MIT license for the integration code. Brand rights are reserved.
+The IPA Loom logo belongs to [V-AX](https://v-ax.com). It is © V-AX, all rights reserved, and it is **not** licensed under the MIT License that covers the code. It appears in these files:
 
-Both README translations use the horizontal logo in a theme-aware `<picture>`: `docs/assets/logo/ipa-loom-lockup-primary.svg` by default and `docs/assets/logo/ipa-loom-lockup-on-dark.svg` for dark mode. Their rounded symbol and lettering are vector paths, with no embedded bitmap, external font, or remote resource.
+- `docs/assets/logo/ipa-loom-lockup-primary.svg`, the logo with its wordmark for light backgrounds, at the top of `README.md`;
+- `docs/assets/logo/ipa-loom-lockup-on-dark.svg`, the same logo for dark backgrounds;
+- `docs/assets/logo/ipa-loom-symbol-on-dark.svg`, the symbol alone, the blue core and white shell without the wordmark.
 
-## Presentation
+You may keep these files in your copy of the repository and use them to refer to this project. If you publish your own product or fork built on IPA Loom, replace the logo with your own and change the name.
 
-- Both SVGs have transparent backgrounds and a blue core (`#0866FF`). The primary version uses dark-ink shell and lettering for light surfaces; the on-dark version uses white (`#FFFFFF`) for dark surfaces. Both README translations select the on-dark version with `prefers-color-scheme: dark` and use primary otherwise. Presentation backgrounds belong to the page or preview, not to the logo assets.
-- Preserve the 1920 × 600 viewBox and aspect ratio. The artwork occupies 1620 × 340 units, with 150 units of clear space on each side and 130 above and below.
-- The lettering is approximately 62% of the symbol's height. Keep the selected symbol-to-wordmark proportions and spacing together; do not stretch or separately resize them.
-- README displays the asset centered at 640 pixels wide (200 pixels high), scaling down to fit narrower screens. Do not crop its clear space or bake a background into it.
-
-You may keep the logo in copies of this repository and use it to refer to IPA Loom. Use your own name and artwork for a separately branded fork or product; do not imply endorsement by V-AX.
-
-Both SVGs are included in the public text-file inventory. Concept images, rendering previews, and private design working files are not part of the public source.
+Apple is a trademark of Apple Inc. This project has no affiliation with Apple.

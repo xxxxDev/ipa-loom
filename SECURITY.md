@@ -1,28 +1,37 @@
-# Security and private data
+# Security
 
-## What is stored
+## How IPA Loom is meant to run
 
-| Data | Location / handling |
+IPA Loom runs on your own Apple Silicon Mac, under your macOS account, with apps and an Apple Account you are allowed to use. It builds and runs pinned tools locally and does not implement its own FairPlay decryption. ipatool is built from source; UnfairPlay is a downloaded, hash-pinned prebuilt executable, and model setup runs it once with administrator rights (`sudo`).
+
+Apart from the Keychain item, everything it stores lives under the private data root `~/Library/Application Support/IPA Loom/`, or an explicit `IPA_LOOM_DATA_HOME`:
+
+| Data | Handling |
 |---|---|
-| Apple password and token | ipatool encrypted state under the private data root |
-| Separate state-unlock key | Non-synchronizing local Keychain item, scoped to the installation |
-| Enrollment model | Private data root; never included in source or CI |
-| Downloaded/decrypted IPA and raw diagnostics | Private run directories; may identify an app or account |
-| Run summaries | Private records; still review before sharing |
-| Administrator password | Entered locally for sudo; not stored by Loom |
+| Apple password and token | ipatool's encrypted state |
+| State-unlock key | A non-synchronizing local Keychain item, scoped to the installation and generated at setup |
+| Enrollment model | Private data root; never in the source |
+| Downloaded or decrypted IPA and raw diagnostics | Private run directories; can identify an app or account |
+| Run summaries | Private records |
+| Administrator password | Entered locally for `sudo`; not stored |
 
-The default data root is `~/Library/Application Support/IPA Loom/`. An explicit `IPA_LOOM_DATA_HOME` override changes that location. File encryption and permissions do not protect a session from software that already controls your macOS account. This project provides no secure-erasure guarantee.
+File encryption and permissions do not protect this data from software that already controls your macOS account, and there is no secure-erasure guarantee.
 
-Source checks reject unexpected files, machine-home paths, and private-key markers. This is a bounded sanity check, not proof that all personal data or secrets have been removed. Check the actual staged blobs before committing and the exact commit before pushing; a clean working copy does not prove the index is clean. Review author metadata, history, screenshots, diffs, and final release contents manually too. Test suites and their evidence are maintained separately and must not be included in the public source.
+## Keep in mind
 
-## Sharing a problem
+- IPA Loom removes the App Store FairPlay protection from an app and writes a decrypted IPA. It does not re-sign it, and a passed verification is not Apple signature trust, installability, or permission to redistribute the app.
+- It signs in to Apple through ipatool, an unofficial client, using your Apple Account. Apple may require extra verification or limit an account used this way.
+- It does not check that a local IPA or an installed app belongs to the signed-in account; ownership is left to Apple and the enrollment model. Use only apps you are authorized to inspect.
+- A TestFlight build is beta software under the developer's and Apple's TestFlight terms and is often confidential. You install it through TestFlight yourself; IPA Loom reads a copy of the installed app and does not check your eligibility.
+- Setup and downloads reach the network, including but not limited to Go and the pinned tool sources (`go.dev`, `api.github.com`, `github.com`, and the hosts they redirect to, such as `dl.google.com` and `codeload.github.com`), Go's module proxy and checksum database (`proxy.golang.org`, `sum.golang.org`, falling back to a module's own source when the proxy lacks it), and Apple during sign-in and download. On first login ipatool also fetches a framework from Apple into the local cache.
+- A decrypted IPA still carries identifying metadata. Review a diagnostic or summary before sharing it, and never share credentials, the model, or raw reports.
 
-For ordinary bugs, provide the Loom version, macOS version/architecture, stage name, redacted error, and reproduction steps using fictional inputs where possible. Remove account names, personal paths, app identifiers/names if private, and run IDs. Do not attach the entire data directory or a raw report.
+## Reporting a vulnerability
 
-Never send Apple credentials, verification codes, Keychain contents, enrollment models, capture/license files, personalized IPAs, or raw recovery reports. A decrypted output can still contain identifying metadata; verification is not a comprehensive anonymization check or permission to redistribute an app.
+Please do not open a public issue for a security problem. Email [support@v-ax.com](mailto:support@v-ax.com) instead. You can also use GitHub's **Report a vulnerability** button on this repository.
 
-## Report a vulnerability
+Include IPA Loom's version or the commit you installed from, the macOS version and architecture, minimal steps to reproduce with fictional inputs where possible, and the expected and observed results. Redact sensitive information from errors and screenshots.
 
-Do not open a public issue for a security problem. Email [support@v-ax.com](mailto:support@v-ax.com) with the IPA Loom version, macOS version, a minimal reproduction, and a redacted error. Use fictional inputs where possible; never attach credentials, models, app packages, or raw diagnostics.
+Do not send passwords, tokens, verification codes, private keys, Keychain contents, enrollment models, account data, personalized IPAs, capture or license files, or raw diagnostics. Include only what is needed to reproduce the problem.
 
-This address is the private reporting channel for IPA Loom. No GitHub private-advisory feature is implied to be enabled. See [operations](docs/OPERATIONS.md) for recovery, cleanup, and their limits.
+For ordinary usage questions and non-sensitive bugs, use this repository's issue tracker.
