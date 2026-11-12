@@ -1,4 +1,4 @@
-IPA Loom: ./ipa-loom.command [Store URL | App ID | local.ipa]
+IPA Loom: ./ipa-loom.command [Store URL | App ID | local.ipa | installed.app]
   --setup         First-run setup
   --doctor        Read-only tools/model check
   --recover       Roll back pending setup
@@ -7,4 +7,7 @@ IPA Loom: ./ipa-loom.command [Store URL | App ID | local.ipa]
   --reset [--apply]       Remove runtime and Keychain item
   --login         Refresh authentication
   --suffix TAG    Output filename label
-  --forget-keychain  Forget a legacy user-chosen key
+
+Installed iOS/TestFlight app: ./ipa-loom.command "/Applications/Example.app"
+Requires an existing model. Copies the app; does not modify or launch it.
+TestFlight invitation links must be opened in TestFlight to install the app first.

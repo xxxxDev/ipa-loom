@@ -9,7 +9,7 @@ case "${1-}" in
   --help|-h) [ "$#" -eq 1 ] || { echo 'Use --help alone.' >&2; exit 2; }
     while IFS= read -r line; do printf '%s\n' "$line"; done < scripts/usage.txt
     exit 0 ;;
-  --setup|--check-build|--doctor|--recover|--forget-keychain)
+  --setup|--check-build|--doctor|--recover)
     [ "$#" -eq 1 ] || { echo 'Use this option alone.' >&2; exit 2; } ;;
   --reset|--clean-runs)
     if [ "$#" -gt 2 ] || { [ "$#" -eq 2 ] && [ "$2" != --apply ]; }; then
@@ -47,7 +47,7 @@ if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
 fi
 if ! /usr/bin/xcrun --find swiftc >/dev/null 2>&1; then
   case "${1-}" in
-    --doctor|--recover|--reset|--clean-runs|--forget-keychain)
+    --doctor|--recover|--reset|--clean-runs)
       echo 'Developer tools unavailable; maintenance did not install or change anything.' >&2; exit 1 ;;
   esac
   echo 'Install Apple Command Line Tools in the system window, then press Return.'

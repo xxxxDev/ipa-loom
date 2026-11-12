@@ -10,7 +10,7 @@ from pathlib import Path
 
 from runtime import ROOT, safe, ensure, inspect
 from setup import LOCAL, JOURNAL, clean_pending, ready, remove_tree, setup, validate_tools
-from lab import save, now
+from runtime import save, now
 from processes import assert_idle, tracked_call
 
 
@@ -59,9 +59,7 @@ def maintenance(action, apply=False):
         if action == '--reset' and LOCAL.exists():
             config = validate_tools()
             account = config.get('keychain_account', '')
-            if account == 'default-passphrase' and config.get('legacy_keychain') is not True:
-                raise ValueError('Unrecognized legacy Keychain scope.')
-            if account != 'default-passphrase' and (len(account) != 32 or any(c not in '0123456789abcdef' for c in account)):
+            if len(account) != 32 or any(c not in '0123456789abcdef' for c in account):
                 raise ValueError('Invalid Keychain account.')
             keychain_done = (previous.get('action') == action and previous.get('status') == 'started'
                              and previous.get('keychain_done') is True and previous.get('keychain_account') == account)
@@ -101,12 +99,17 @@ def main():
         return 0
     import pipeline
     parsed = pipeline.parse_arguments(args)
-    if parsed.target:
-        pipeline.parse_target(parsed.target)
+    parsed_target = pipeline.parse_target(parsed.target) if parsed.target else None
+    if parsed_target and parsed_target[0] == 'installed-app' and not ready():
+        raise RuntimeError('Installed-app decryption needs an existing verified model. Run --setup with a matching Mac App Store app and IPA first.')
     if not LOCAL.exists():
-        if parsed.forget_keychain:
-            raise RuntimeError('No configured installation.')
-        setup(target=parsed.target)
+        # First setup builds the model from the chosen app and decrypts it as the first result.
+        seed_store_id = setup(target=parsed.target)
+        # If a different app was asked for on the command line, decrypt that one too; the chosen
+        # app is already the first result, so it is never decrypted twice.
+        if parsed_target and parsed_target != ('store', seed_store_id):
+            pipeline.main()
+        return 0
     pipeline.main()
     return 0
 
@@ -116,6 +119,9 @@ if __name__ == '__main__':
         sys.exit(main())
     except KeyboardInterrupt:
         print('Interrupted; cleanup attempted', file=sys.stderr)
+        sys.exit(130)
+    except EOFError:
+        print('Cancelled at a prompt; cleanup attempted', file=sys.stderr)
         sys.exit(130)
     except (OSError, ValueError, RuntimeError, KeyError, subprocess.CalledProcessError, zipfile.BadZipFile) as exc:
         print('Stopped: ' + str(exc), file=sys.stderr)

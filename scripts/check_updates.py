@@ -116,8 +116,8 @@ def verify(candidate, report, workspace):
     report['candidate_build'] = 'passed' if result.returncode == 0 else 'failed'
     report['candidate_pins'] = candidate
     report['required_before_promotion'] = ['review source/license changes and hashes',
-        'private fresh-login/setup/decryption regression', 'owner-approved dependency pin change and date release']
-    report['status'] = 'needs-private-regression' if result.returncode == 0 else 'incompatible-or-build-failed'
+        'a full authorized run', 'maintainer-reviewed dependency pin change and date release']
+    report['status'] = 'needs-full-run' if result.returncode == 0 else 'incompatible-or-build-failed'
     return result.returncode
 
 

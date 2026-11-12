@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-'One entry point for private App Store download, IPA decryption and verification.'
+'Download or copy an app, decrypt its IPA, and verify the result.'
 import argparse
 import fcntl
-import getpass
 import hashlib
 import json
 import os
@@ -16,8 +15,9 @@ import time
 import uuid
 import zipfile
 from urllib.parse import urlparse
-from lab import safe, save, now, MARKER
+from runtime import safe, save, now, MARKER, progress_bar, CLEAR_EOL
 
+from installed_app import resolve_app, package_app, scan_bundle
 from runtime import ROOT, CODE_ROOT, ensure
 from processes import execute as execute_child, assert_quiescent, assert_idle, tracked_call
 LOCAL=ROOT/'.local'
@@ -27,6 +27,8 @@ def parse_target(value):
     if value.isdigit():
         return ('store',str(int(value)))
     url=urlparse(value)
+    if url.scheme == 'itms-beta' or (url.scheme == 'https' and url.hostname == 'testflight.apple.com'):
+        raise ValueError('TestFlight invitations are not IPA download URLs. Install the beta with TestFlight on this Mac, then pass its /Applications/Name.app path.')
     if url.scheme:
         if url.scheme!='https' or url.hostname!='apps.apple.com' or url.username or url.password:
             raise ValueError('Only https://apps.apple.com App Store links are accepted.')
@@ -34,9 +36,11 @@ def parse_target(value):
         if not found:
             raise ValueError('The App Store link has no numeric App ID.')
         return ('store',found.group(1))
+    if Path(value).suffix.lower() == '.app':
+        return ('installed-app', str(resolve_app(value)))
     path=Path(value).expanduser().resolve()
     if path.suffix.lower()!='.ipa' or not path.is_file():
-        raise ValueError('Provide an App Store link, numeric App ID, or existing .ipa.')
+        raise ValueError('Provide an App Store link, numeric App ID, or existing .ipa, or installed iOS .app.')
     return ('file',str(path))
 
 
@@ -162,27 +166,46 @@ class Pipeline:
         self.env.update(XDG_STATE_HOME=str(safe(LOCAL/'state')),DEV_IPA_CACHE=str(safe(LOCAL/'cache')),
                         TMPDIR=str(self.work/'tmp'),UNFAIRPLAY_MODEL_DIR=str(safe(LOCAL/'models')))
 
-    def execute(self,stage,command,secret=None,interactive=False,quiet=False):
+    def execute(self,stage,command,secret=None,interactive=False,quiet=False,label=None):
         step={'stage':stage,'started':now()};self.data['steps'].append(step);save(self.record,self.data)
-        print('▶ '+stage,flush=True)
+        human=label or stage.replace('-',' ')
+        inplace=sys.stdout.isatty()
+        live=inplace and not interactive
+        ticks=[0]
+        if interactive:
+            print('  '+human,flush=True)
+        elif live:
+            print('\r  > '+human+'  '+progress_bar(0)+CLEAR_EOL,end='',flush=True)
+        def progress():
+            if live:
+                ticks[0]+=1
+                print('\r  > '+human+'  '+progress_bar(ticks[0])+CLEAR_EOL,end='',flush=True)
+            elif not interactive:
+                print('  '+human+' (working)',flush=True)
         env=self.env.copy();fds=();reader=writer=None
         if secret is not None:
             reader,writer=os.pipe()
             os.write(writer,secret);os.close(writer);writer=None
             env['DEV_IPA_PASSPHRASE_FD']=str(reader);fds=(reader,)
-        code=130;started=time.monotonic()
+        code=130
         try:
             with (self.work/'private-logs'/(stage+'.stdout')).open('x') as out,(self.work/'private-logs'/(stage+'.stderr')).open('x') as err:
                 stdout=subprocess.DEVNULL if quiet else (None if interactive else out)
                 stderr=subprocess.DEVNULL if quiet else (None if interactive else err)
                 code=execute_child(command, record=self.data, persist=lambda: save(self.record,self.data),
                     terminal=interactive, env=env,cwd=self.work,stdin=None,stdout=stdout,stderr=stderr,pass_fds=fds,
-                    progress=None if interactive else lambda: print(
-                        '  '+stage+' still running; elapsed '+str(int(time.monotonic()-started))+' seconds',flush=True))
+                    progress=None if interactive else progress)
         finally:
+            # Clean up and record the step first, so a failed terminal write never leaks a pipe.
             if reader is not None:os.close(reader)
             if writer is not None:os.close(writer)
             step.update(ended=now(),exit_code=code);save(self.record,self.data)
+            if live:
+                print(('\r  ✓ '+human+CLEAR_EOL) if code==0 else ('\r'+CLEAR_EOL),flush=True)
+            elif interactive and code==0:
+                print('  ✓ '+human,flush=True)
+            elif code==0 and not interactive:
+                print('  '+human+' done',flush=True)
         return code
 
     def close(self,passed):
@@ -211,9 +234,7 @@ def tool_config():
 def keychain_account():
     config=json.loads(safe(LOCAL/'tools.json').read_text())
     account=config.get('keychain_account','')
-    if account=='default-passphrase' and config.get('legacy_keychain') is not True:
-        raise ValueError('Unrecognized legacy Keychain scope.')
-    if account!='default-passphrase' and not re.fullmatch(r'[0-9a-f]{32}',account):
+    if not re.fullmatch(r'[0-9a-f]{32}',account):
         raise ValueError('Invalid Keychain scope.')
     return account
 
@@ -222,17 +243,10 @@ def keychain_secret(helper, record, persist):
     p=tracked_call([helper,'get',keychain_account()],record=record,persist=persist,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
     if p.returncode==0:
         if not 12<=len(p.stdout)<=4096:raise RuntimeError('Invalid stored passphrase.')
-        return p.stdout,False
+        return p.stdout
     if p.returncode!=44:
         raise RuntimeError('Keychain access failed or was cancelled; no login was retried.')
-    config=json.loads(safe(LOCAL/'tools.json').read_text())
-    if config.get('legacy_keychain') is not True:
-        raise RuntimeError('Generated unlock key is missing. Restore your own Keychain backup or reset and set up again; there is no user-chosen passphrase.')
-    if not sys.stdin.isatty():
-        raise RuntimeError('First use needs your Terminal to save the existing passphrase in Keychain.')
-    value=getpass.getpass('First setup: enter your existing ipatool passphrase (not your Apple password): ').encode()
-    if not 12<=len(value)<=4096:raise ValueError('Passphrase must be 12–4096 bytes.')
-    return value,True
+    raise RuntimeError('Generated unlock key is missing. Restore your own Keychain backup or reset and set up again; there is no user-chosen passphrase.')
 
 
 def parse_arguments(arguments=None):
@@ -240,7 +254,6 @@ def parse_arguments(arguments=None):
     parser.add_argument('target',nargs='?')
     parser.add_argument('--suffix',help='Optional filename suffix (not a signing identity).')
     parser.add_argument('--login',action='store_true',help='Explicitly refresh Apple authentication in your Terminal.')
-    parser.add_argument('--forget-keychain',action='store_true',help='Delete only this project passphrase item.')
     args=parser.parse_args(arguments)
     if args.suffix is not None:
         try:
@@ -249,8 +262,8 @@ def parse_arguments(arguments=None):
             parser.error(str(error))
     if args.login and not args.target and args.suffix is not None:
         parser.error('--suffix needs a target when used with --login.')
-    if args.forget_keychain and (args.target or args.login or args.suffix is not None):
-        parser.error('Use --forget-keychain alone.')
+    if args.login and args.target and parse_target(args.target)[0] == 'installed-app':
+        parser.error('Use --login separately; installed-app runs do not authenticate or download.')
     return args
 
 
@@ -265,64 +278,69 @@ def main():
         if receipt.exists() and json.loads(receipt.read_text()).get('status')=='started':
             raise RuntimeError('Finish the interrupted cleanup before starting another run.')
         tools=tool_config()
-        if args.forget_keychain:
-            if args.target or args.login:raise ValueError('Use --forget-keychain alone.')
-            config=json.loads(safe(LOCAL/'tools.json').read_text())
-            if config.get('legacy_keychain') is not True:
-                raise RuntimeError('Cannot forget a generated unlock key while retaining encrypted state. Use --reset to remove the installation together.')
-            forget=Pipeline(); forgotten=False
-            try:
-                tracked_call([tools['keychain-bridge'],'delete',keychain_account()],record=forget.data,
-                             persist=lambda: save(forget.record,forget.data),check=True)
-                forgotten=True
-            finally:
-                forget.close(forgotten)
-            print('IPA Loom Keychain item removed; encrypted login files and models retained.');return
         if not args.target and not args.login:
             if not sys.stdin.isatty():raise ValueError('A target is required.')
-            args.target=input('App Store URL, App ID or local IPA path: ').strip()
+            args.target=input('App Store URL, App ID, local IPA or installed iOS .app path: ').strip().strip('"\'')
         target=parse_target(args.target) if args.target else None
         if target and not any(safe(LOCAL/'models').glob('*.bin')):
             raise RuntimeError('Reusable model is missing; restore the verified model before dumping.')
         run=Pipeline();passed=False
+        installed=None;source_snapshot=None
         try:
+            run.data['input_kind']=target[0] if target else 'login'
+            save(run.record,run.data)
             if args.login or (target and target[0]=='store'):
-                secret,new=keychain_secret(tools['keychain-bridge'],run.data,lambda: save(run.record,run.data))
+                secret=keychain_secret(tools['keychain-bridge'],run.data,lambda: save(run.record,run.data))
                 if args.login:
                     if not sys.stdin.isatty():raise RuntimeError('Login requires your Terminal.')
-                    code=run.execute('login',[tools['ipatool'],'auth','login'],secret,interactive=True)
+                    code=run.execute('login',[tools['ipatool'],'auth','login'],secret,interactive=True,label='Signing in to the App Store')
                 else:
-                    code=run.execute('session-check',[tools['ipatool'],'--non-interactive','auth','info'],secret,quiet=True)
+                    code=run.execute('session-check',[tools['ipatool'],'--non-interactive','auth','info'],secret,quiet=True,label='Checking your App Store session')
                 if code!=0:raise RuntimeError('Session unavailable or passphrase incorrect. The wrapper will stop; use --login if reauthentication is needed.')
-                if new:
-                    tracked_call([tools['keychain-bridge'],'add',keychain_account()],record=run.data,
-                                 persist=lambda: save(run.record,run.data),input=secret,stdout=subprocess.DEVNULL,check=True)
-                    print('Passphrase saved in the local Keychain (not synced to iCloud).')
                 if target and target[0]=='store':
                     ipa=run.work/'input/source.ipa'
-                    if run.execute('download',[tools['ipatool'],'download','--app-id',target[1],'--platform','iphone','--output',str(ipa)],secret,interactive=True)!=0:
+                    if run.execute('download',[tools['ipatool'],'download','--app-id',target[1],'--platform','iphone','--output',str(ipa)],secret,interactive=True,label='Downloading the app')!=0:
                         raise RuntimeError('IPA download failed; the wrapper will not retry or purchase. ipatool may have attempted token renewal.')
                 del secret
             if target:
+                if target[0]=='installed-app':
+                    print('  Packaging the installed app',flush=True)
+                    ipa=run.work/'input/source.ipa'
+                    installed,source_snapshot=package_app(Path(target[1]),ipa)
+                    run.data['source_copy_verified']=True
+                    save(run.record,run.data)
                 if target[0]=='file':
                     if Path(target[1]).stat().st_size > MAX_IPA_BYTES:
                         raise ValueError('Input IPA exceeds file size limit.')
                     ipa=run.work/'input/source.ipa';shutil.copyfile(target[1],ipa)
                 info=ipa_info(ipa);run.data['app']=info;save(run.record,run.data)
                 output=run.work/'output'/output_name(ipa,args.suffix);run.data['output_filename']=output.name;report=run.work/'private-logs/decryption-report.json'
-                if run.execute('decrypt',[tools['unfairplay'],'decrypt','--input',str(ipa),'--model',str(LOCAL/'models'),'--output',str(output),'--report',str(report),'--strip-account-data'])!=0:
+                if run.execute('decrypt',[tools['unfairplay'],'decrypt','--input',str(ipa),'--model',str(LOCAL/'models'),'--output',str(output),'--report',str(report),'--strip-account-data'],label='Decrypting the app')!=0:
                     raise RuntimeError('Decryption failed; private diagnostics were retained.')
-                print('▶ Verify integrity and plaintext hash',flush=True)
                 run.data['verification']=verify_result(info,output,report);save(run.record,run.data)
-                print('Complete: '+str(output))
-                print('plaintext_verified=true; not re-signed or installation-tested.')
+                print('  ✓ Verifying the decryption',flush=True)
             passed=True
         except BaseException as e:
             run.data['failure_type']=type(e).__name__
             raise
         finally:
-            run.close(passed)
-            print('Record: '+str(run.record))
+            try:
+                if source_snapshot is not None:
+                    run.data['installed_app_unchanged']=False
+                    if scan_bundle(installed)!=source_snapshot:
+                        raise RuntimeError('Installed app changed during this run; no output accepted. Retry after its update finishes.')
+                    run.data['installed_app_unchanged']=True
+            except BaseException as error:
+                passed=False
+                run.data['failure_type']=type(error).__name__
+                raise
+            finally:
+                run.close(passed)
+                print('  Record: '+str(run.record))
+        if passed and target:
+            print('\n✓ Done')
+            print('  Decrypted app:  '+str(output))
+            print('  plaintext_verified=true; not re-signed or installation-tested.')
 
 if __name__=='__main__':
     try:main()

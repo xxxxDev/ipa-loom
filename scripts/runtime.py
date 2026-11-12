@@ -1,11 +1,25 @@
 """Private application storage, separate from the source checkout."""
+import datetime
+import json
 import os
 from pathlib import Path
+import re
 import stat
+import uuid
 
 PRODUCT = 'IPA Loom'
 CODE_ROOT = Path(__file__).resolve().parents[1]
 MARKER = 'ipa-loom-data-v1\n'
+CLEAR_EOL = '\x1b[K'  # ANSI: clear from the cursor to the end of the line, so nothing trails
+
+
+def progress_bar(step, width=10, block=3):
+    """An indeterminate progress bar: a moving block. Plain ASCII so every terminal renders it."""
+    pos = step % (width - block + 1)
+    cells = ['.'] * width
+    for i in range(pos, min(pos + block, width)):
+        cells[i] = '#'
+    return '[' + ''.join(cells) + ']'
 raw = os.environ.get('IPA_LOOM_DATA_HOME')
 ROOT = Path(raw).expanduser() if raw else Path.home() / 'Library/Application Support' / PRODUCT
 if not ROOT.is_absolute():
@@ -45,3 +59,32 @@ def ensure():
         ROOT.mkdir(parents=True, mode=0o700)
         (ROOT / '.ipa-loom-data').write_text(MARKER)
     safe(ROOT / 'records').mkdir(mode=0o700, exist_ok=True)
+
+
+def now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def save(path, value):
+    safe(path)
+    temp = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
+    with temp.open('x') as f:
+        json.dump(value, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+    os.replace(temp, path)
+
+
+def directory(path):
+    safe(path).mkdir(mode=0o700, parents=True, exist_ok=True)
+    if not path.is_dir():
+        raise ValueError('not a directory')
+
+
+def load_run(run_id):
+    if not re.fullmatch(r'[0-9a-f]{32}', run_id):
+        raise ValueError('invalid run ID')
+    report = safe(ROOT / 'records' / (run_id + '.json'))
+    data = json.loads(report.read_text())
+    if data.get('id') != run_id or data.get('schema') != 1:
+        raise ValueError('invalid run record')
+    return report, data

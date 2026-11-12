@@ -1,3 +1,14 @@
+--- a/cmd/auth.go
++++ b/cmd/auth.go
+@@ -37,7 +37,7 @@
+ 			}
+ 
+ 			if email == "" && interactive {
+-				value, err := readPrompt("enter Apple ID (email address or phone number): ", false)
++				value, err := readPrompt("enter Apple ID (email address): ", false)
+ 				if err != nil {
+ 					return fmt.Errorf("failed to read Apple ID: %w", err)
+ 				}
 --- a/cmd/common.go
 +++ b/cmd/common.go
 @@ -6,6 +6,7 @@
@@ -155,7 +166,7 @@
  	return filepath.Join(root, "ipatool", "sap", assetCacheDirectory), nil
 --- /dev/null
 +++ b/internal/sap/assets/lab_progress.go
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,101 @@
 +package assets
 +
 +import (
@@ -206,6 +217,13 @@
 +		lastCount := -1
 +		var lastBytes int64 = -1
 +		changed := started
++		// On a terminal, update one line in place; when captured to a file, one line per tick.
++		inplace := false
++		if file, ok := writer.(*os.File); ok {
++			if info, err := file.Stat(); err == nil && info.Mode()&os.ModeCharDevice != 0 {
++				inplace = true
++			}
++		}
 +		emit := func() {
 +			count, size := componentProgress(directory)
 +			now := time.Now()
@@ -214,15 +232,32 @@
 +				lastCount = count
 +				lastBytes = size
 +			}
-+			fmt.Fprintln(writer, progressLine(count, size, now.Sub(started), now.Sub(changed)))
++			line := progressLine(count, size, now.Sub(started), now.Sub(changed))
++			if inplace {
++				// Carriage return plus clear-to-end-of-line so a shorter line leaves no tail.
++				fmt.Fprint(writer, "\r"+line+"\x1b[K")
++			} else {
++				fmt.Fprintln(writer, line)
++			}
 +		}
 +		emit()
 +		for {
 +			select {
 +			case success := <-stop:
 +				if success {
++					// Every component is present and hash-verified; show the bar complete.
++					_, size := componentProgress(directory)
++					final := progressLine(len(requiredFiles), size, time.Since(started), 0)
++					if inplace {
++						fmt.Fprint(writer, "\r"+final+"\x1b[K\n")
++					} else {
++						fmt.Fprintln(writer, final)
++					}
 +					fmt.Fprintln(writer, "Authentication components are ready and hash-verified; login follows. Watch for the verification-code prompt.")
 +				} else {
++					if inplace {
++						fmt.Fprintln(writer)
++					}
 +					fmt.Fprintln(writer, "Component preparation ended without completing; see the following error.")
 +				}
 +				return
@@ -284,3 +319,4 @@
  	}
  
  	root := filepath.Join(cache, "ipatool", "unicorn", unicornVersion)
+
