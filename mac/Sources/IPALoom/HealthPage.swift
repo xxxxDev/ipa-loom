@@ -5,11 +5,11 @@ struct HealthPage: View {
     @EnvironmentObject var model: AppModel
 
     var body: some View {
+        if settingUp {
+            // Setup gets the page to itself; the health details come back when it is done.
+            SetupFlow()
+        } else {
         ScrollView {
-            if settingUp {
-                // Setup gets the page to itself; the health details come back when it is done.
-                SetupFlow().frame(maxWidth: 860).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.vertical, 20)
-            } else {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 12) {
@@ -45,7 +45,7 @@ struct HealthPage: View {
                     .font(.small).foregroundStyle(Palette.muted).padding(.horizontal, 4)
             }
             .padding(28)
-            }
+        }
         }
     }
 

@@ -23,6 +23,22 @@ struct AppPicker: View {
     @ViewState private var note: String?
 
     var body: some View {
+        StepPage {
+            steps
+        } leading: {
+            Button("Choose Another App…", action: choose).buttonStyle(.link)
+            Button("Use Terminal Instead") { model.openTerminalSetup() }.buttonStyle(.link).padding(.leading, 8)
+        } trailing: {
+            Button("Check Again") { model.findInstalledApps() }.secondaryButtonStyle()
+            NextButton(title: "Continue") { if let picked { model.startSetup(with: picked) } }.disabled(picked == nil)
+        }
+        .onAppear {
+            model.findInstalledApps()
+            if picked == nil, model.installedApps.count == 1 { picked = model.installedApps.first }
+        }
+    }
+
+    private var steps: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Welcome to IPA Loom").font(.hero.bold())
@@ -43,11 +59,8 @@ struct AppPicker: View {
                             Text(step).fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    HStack(spacing: 10) {
-                        Button("Open App Store") { NSWorkspace.shared.open(URL(string: "macappstore://")!) }.primaryButtonStyle()
-                        Button("Check Again") { model.findInstalledApps() }.secondaryButtonStyle()
-                    }
-                    .controlSize(.large).padding(.top, 4)
+                    Button("Open App Store") { NSWorkspace.shared.open(URL(string: "macappstore://")!) }.primaryButtonStyle()
+                        .controlSize(.large).padding(.top, 4)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .glassCard(padding: 22)
@@ -84,26 +97,10 @@ struct AppPicker: View {
 
             if let note { Text(note).font(.note).foregroundStyle(Palette.amber) }
 
-            HStack(spacing: 10) {
-                Button("Choose Another App…", action: choose).buttonStyle(.link)
-                Button("Use Terminal Instead") { model.openTerminalSetup() }.buttonStyle(.link).padding(.leading, 8)
-                Spacer()
-                if !model.installedApps.isEmpty {
-                    Button("Check Again") { model.findInstalledApps() }.secondaryButtonStyle()
-                    Button("Continue") { if let picked { model.startSetup(with: picked) } }
-                        .primaryButtonStyle().disabled(picked == nil)
-                }
-            }
-            .controlSize(.large)
-
             Text("Next: Apple sign-in and your Mac administrator password. Both go straight to the sign-in and system tools on this Mac; the app saves neither.")
                 .font(.note).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onAppear {
-            model.findInstalledApps()
-            if picked == nil, model.installedApps.count == 1 { picked = model.installedApps.first }
-        }
     }
 
     private func choose() {
@@ -135,8 +132,46 @@ struct SetupRunView: View {
     @EnvironmentObject var model: AppModel
     @ObservedObject var setup: SetupSession
     @ViewState private var showOutput = false
+    @ViewState private var first = ""
+    @ViewState private var second = ""
 
     var body: some View {
+        StepPage {
+            steps
+        } leading: {
+            if setup.isRunning {
+                Button(setup.stopping ? "Stopping…" : "Cancel Setup") { setup.cancel() }.secondaryButtonStyle()
+                    .disabled(setup.stopping)
+                    .help(setup.cancelsNow ? "Stop setup and remove what it prepared" : "This step cannot be interrupted safely. Setup will stop at its next question.")
+            } else if setup.state == .passed {
+                Button("Open Library") { model.setup = nil; model.page = .library }.secondaryButtonStyle()
+            }
+        } trailing: {
+            if let question = setup.question {
+                NextButton(title: question == .appleAccount ? "Sign In" : "Continue", action: submit).disabled(first.isEmpty)
+            } else if setup.isRunning {
+                // Nothing to press: the step moves on by itself.
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Working, no action needed").foregroundStyle(Palette.muted)
+                }
+            } else if setup.state == .passed {
+                NextButton(title: "Decrypt an App") { model.setup = nil; model.page = .decrypt }
+            } else {
+                NextButton(title: "Try Again") { model.setup = nil }
+            }
+        }
+        .onChange(of: setup.question) { first = ""; second = "" }
+    }
+
+    private func submit() {
+        guard let question = setup.question, !first.isEmpty else { return }
+        if question == .appleAccount { setup.signIn(appleID: first, password: second) } else { setup.send(first) }
+        first = ""
+        second = ""
+    }
+
+    private var steps: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 14) {
                 LetterTile(name: setup.app.name, size: 44)
@@ -146,17 +181,12 @@ struct SetupRunView: View {
                         .font(.note).foregroundStyle(Palette.muted)
                 }
                 Spacer()
-                if setup.isRunning {
-                    Button(setup.stopping ? "Stopping…" : "Cancel") { setup.cancel() }.secondaryButtonStyle()
-                        .disabled(setup.stopping)
-                        .help(setup.cancelsNow ? "Stop setup and remove what it prepared" : "This step cannot be interrupted safely. Setup will stop at its next question.")
-                }
             }
 
             PhaseStrip(current: PhaseStrip.shown(setup.phase), running: setup.isRunning)
 
             if let question = setup.question {
-                QuestionForm(setup: setup, question: question)
+                QuestionForm(setup: setup, question: question, first: $first, second: $second, submit: submit)
             } else {
                 // The result and the way onward sit together, where the eye already is.
                 VStack(alignment: .leading, spacing: 16) {
@@ -167,14 +197,6 @@ struct SetupRunView: View {
                     }
                     if setup.state == .passed {
                         Text("Next: paste an App Store link or drop an IPA to decrypt another app.").foregroundStyle(Palette.muted)
-                        HStack(spacing: 12) {
-                            Button { model.setup = nil; model.page = .decrypt } label: {
-                                Label("Decrypt an App", systemImage: "arrow.right").labelStyle(TrailingIconLabelStyle())
-                            }.startButtonStyle()
-                            Button("Open Library") { model.setup = nil; model.page = .library }.secondaryButtonStyle()
-                        }
-                    } else if !setup.isRunning {
-                        Button("Try Again") { model.setup = nil }.primaryButtonStyle()
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -257,8 +279,9 @@ struct PhaseStrip: View {
 struct QuestionForm: View {
     @ObservedObject var setup: SetupSession
     var question: SetupSession.Question
-    @ViewState private var first = ""
-    @ViewState private var second = ""
+    @Binding var first: String
+    @Binding var second: String
+    var submit: () -> Void
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -285,26 +308,15 @@ struct QuestionForm: View {
                     SecureField("Typed characters stay hidden", text: $first).focused($focused).onSubmit(submit)
                 }
             }
-            HStack {
-                Text("Passed straight to the tool that asked. The app saves none of it.")
-                    .font(.small).foregroundStyle(Palette.muted)
-                Spacer()
-                Button(question == .appleAccount ? "Sign In" : "Continue", action: submit)
-                    .primaryButtonStyle().disabled(first.isEmpty)
-            }
+            Text("Passed straight to the tool that asked. The app saves none of it.")
+                .font(.small).foregroundStyle(Palette.muted)
         }
         .textFieldStyle(.roundedBorder)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(22)
         .background(Palette.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .onAppear { focused = true }
         .id(question)
-    }
-
-    private func submit() {
-        guard !first.isEmpty else { return }
-        if question == .appleAccount { setup.signIn(appleID: first, password: second) } else { setup.send(first) }
-        first = ""
-        second = ""
     }
 
     private var title: String {

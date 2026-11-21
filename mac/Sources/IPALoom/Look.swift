@@ -184,11 +184,55 @@ extension Date {
 
 /// A solid green capsule: the one action a Mac that was never set up should take.
 struct StartButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.heading).foregroundStyle(.white)
-            .padding(.horizontal, 22).padding(.vertical, 10)
-            .background(Color(red: 0.12, green: 0.64, blue: 0.33).opacity(configuration.isPressed ? 0.75 : 1), in: Capsule())
+    func makeBody(configuration: Configuration) -> some View { Face(configuration: configuration) }
+
+    /// Reads whether the button is enabled, which a style can only do from a view.
+    private struct Face: View {
+        let configuration: Configuration
+        @Environment(\.isEnabled) private var enabled
+        var body: some View {
+            configuration.label
+                .font(.heading).foregroundStyle(.white.opacity(enabled ? 1 : 0.55))
+                .padding(.horizontal, 22).padding(.vertical, 10)
+                .background(Color(red: 0.12, green: 0.64, blue: 0.33).opacity(!enabled ? 0.35 : configuration.isPressed ? 0.75 : 1), in: Capsule())
+        }
+    }
+}
+
+/// The button that leads to the next step: green, with an arrow, at the bottom right.
+struct NextButton: View {
+    var title: String
+    var action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: "arrow.right").labelStyle(TrailingIconLabelStyle())
+        }
+        .startButtonStyle()
+    }
+}
+
+/// A step's page: its content scrolls, and its buttons stay along the bottom, with the way
+/// onward at the bottom right.
+struct StepPage<Content: View, Leading: View, Trailing: View>: View {
+    @ViewBuilder var content: Content
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                content.frame(maxWidth: 860).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.vertical, 20)
+            }
+            Divider().opacity(0.5)
+            HStack(spacing: 12) {
+                leading
+                Spacer()
+                trailing
+            }
+            .controlSize(.large)
+            .frame(maxWidth: 860).frame(maxWidth: .infinity)
+            .padding(.horizontal, 28).padding(.vertical, 16)
+        }
     }
 }
 
