@@ -74,7 +74,7 @@ First use builds pinned tools and guides Apple login, matching-app checks, model
   <img src="docs/assets/screens/ipa-loom-app-decrypt.png" alt="The IPA Loom Mac app decrypting a fictional Weather Lens app: steps done and running on the left, the encrypted and decrypted files on the right; sample data, not a real run" width="900">
 </p>
 
-Prefer a window to a terminal? The IPA Loom app runs the same engine, does first-time setup in its own window, and shows your decrypted apps in a Library. Install it with Homebrew:
+Prefer a window to a terminal? The IPA Loom app (macOS 14 or later) runs the same engine, does first-time setup in its own window, and shows your decrypted apps in a Library. Install it with Homebrew:
 
 ```sh
 brew install --cask xxxxDev/tap/ipa-loom
