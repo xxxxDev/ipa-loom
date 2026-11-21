@@ -188,12 +188,14 @@ class Pipeline:
             os.write(writer,secret);os.close(writer);writer=None
             env['DEV_IPA_PASSPHRASE_FD']=str(reader);fds=(reader,)
         code=130
+        # Without a terminal there is nothing to prompt on, so the tool gets its own process
+        # group: an interrupt (the app's Cancel) can then confirm it stopped and clean up.
         try:
             with (self.work/'private-logs'/(stage+'.stdout')).open('x') as out,(self.work/'private-logs'/(stage+'.stderr')).open('x') as err:
                 stdout=subprocess.DEVNULL if quiet else (None if interactive else out)
                 stderr=subprocess.DEVNULL if quiet else (None if interactive else err)
                 code=execute_child(command, record=self.data, persist=lambda: save(self.record,self.data),
-                    terminal=interactive, env=env,cwd=self.work,stdin=None,stdout=stdout,stderr=stderr,pass_fds=fds,
+                    terminal=interactive and sys.stdin.isatty(), env=env,cwd=self.work,stdin=None,stdout=stdout,stderr=stderr,pass_fds=fds,
                     progress=None if interactive else progress)
         finally:
             # Clean up and record the step first, so a failed terminal write never leaks a pipe.
