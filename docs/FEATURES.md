@@ -10,6 +10,7 @@
 - Read-only packaging of installed iOS/TestFlight apps, source-change detection, and per-run records; temporary copies follow the same cleanup rules as downloaded IPAs.
 - Metadata-based output filenames with an optional suffix.
 - Optional retention of the encrypted App Store download next to the decrypted output (`--keep-encrypted`).
+- A Mac app over the same engine: first setup, decryption, a Library of decrypted apps, and checked self-updates. See [mac/README.md](../mac/README.md).
 - Stable upstream release detection, with separate temporary builds and checks before any adoption.
 
 # Limits

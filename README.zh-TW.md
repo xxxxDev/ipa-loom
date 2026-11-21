@@ -70,6 +70,10 @@ IPA Loom 把 IPA 下載、解密、驗證與清理整合在一台 Apple Silicon 
 
 ### Mac App（預覽）
 
+<p align="center">
+  <img src="docs/assets/screens/ipa-loom-app-decrypt.png" alt="IPA Loom Mac App 正在解密虛構的 Weather Lens App：左邊是已完成與進行中的步驟，右邊是加密檔與解密檔；示範資料，不是真實執行" width="900">
+</p>
+
 想用視窗而不是終端機？IPA Loom App 跑的是同一套引擎，首次設定在自己的視窗裡完成，並把解密好的 App 列在資料庫頁。用 Homebrew 安裝：
 
 ```sh
