@@ -1,5 +1,7 @@
 # IPA Loom for Mac
 
+Install with `brew install --cask xxxxDev/tap/ipa-loom`, or download the disk image from the [latest release](https://github.com/xxxxDev/ipa-loom/releases/latest). The rest of this page is for building it yourself.
+
 A native window over the same engine the terminal command runs. It starts the engine, reads the records the engine writes, and shows your decrypted apps. It holds no account, model or IPA of its own: everything stays in the private data folder (`~/Library/Application Support/IPA Loom`), shared with `ipa-loom.command`.
 
 The app is dark only and uses Liquid Glass on macOS 26 and later, with a plain material on macOS 14 and 15.
@@ -26,9 +28,7 @@ Apple's Command Line Tools are enough; Xcode is not needed. The build copies the
 
 An App Store run started from the app also keeps the encrypted download (`--keep-encrypted`), so the Library shows both files. Earlier runs, local files and installed apps have no kept original.
 
-Not in the app yet:
-
-- First-time setup runs in the app, from Setup & Health: pick the installed app, then answer the Apple sign-in and the Mac administrator password in the app's own forms. The engine's sign-in and system tools still do the asking, on a private terminal the app stands in front of (`scripts/terminal_bridge.py`); the app passes on what you type and saves none of it. The same setup in Terminal stays available.
+First-time setup runs in the app, from Setup & Health: pick the installed app, then answer the Apple sign-in and the Mac administrator password in the app's own forms. The engine's sign-in and system tools still do the asking, on a private terminal the app stands in front of (`scripts/terminal_bridge.py`); the app passes on what you type and saves none of it. The same setup in Terminal stays available.
 
 ## Updates
 

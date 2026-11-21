@@ -70,7 +70,13 @@ First use builds pinned tools and guides Apple login, matching-app checks, model
 
 ### Mac app (preview)
 
-Prefer a window to a terminal? Double-click `ipa-loom-app.command` to build and open the IPA Loom app. It runs the same engine and shows your decrypted apps in a Library. First-time setup runs in the app too. See [mac/README.md](mac/README.md).
+Prefer a window to a terminal? The IPA Loom app runs the same engine, does first-time setup in its own window, and shows your decrypted apps in a Library. Install it with Homebrew:
+
+```sh
+brew install --cask xxxxDev/tap/ipa-loom
+```
+
+Or download `IPA-Loom-<version>-arm64.dmg` from the [latest release](https://github.com/xxxxDev/ipa-loom/releases/latest) and drag IPA Loom to Applications. The app is signed with the project's own certificate, not notarized by Apple, so a downloaded copy needs Open Anyway in System Settings on first launch; the Homebrew install skips that. It checks for new releases and can update itself. To build it from source instead, double-click `ipa-loom-app.command`. See [mac/README.md](mac/README.md).
 
 ## Use it
 

@@ -70,7 +70,13 @@ IPA Loom 把 IPA 下載、解密、驗證與清理整合在一台 Apple Silicon 
 
 ### Mac App（預覽）
 
-想用視窗而不是終端機？雙擊 `ipa-loom-app.command` 就會建置並開啟 IPA Loom App。它跑的是同一套引擎，並把解密好的 App 列在資料庫頁。首次設定也能在 App 裡完成。詳見 [mac/README.md](mac/README.md)（英文）。
+想用視窗而不是終端機？IPA Loom App 跑的是同一套引擎，首次設定在自己的視窗裡完成，並把解密好的 App 列在資料庫頁。用 Homebrew 安裝：
+
+```sh
+brew install --cask xxxxDev/tap/ipa-loom
+```
+
+或從[最新版本](https://github.com/xxxxDev/ipa-loom/releases/latest)下載 `IPA-Loom-<version>-arm64.dmg`，把 IPA Loom 拖進「應用程式」。App 用的是專案自己的憑證簽章，沒有經過 Apple 公證，所以下載的版本第一次開啟要到「系統設定」按「強制打開」；用 Homebrew 安裝則不必。它會檢查新版本，也能自己更新。想改從原始碼建置，雙擊 `ipa-loom-app.command` 即可。詳見 [mac/README.md](mac/README.md)（英文）。
 
 ## 使用方式
 

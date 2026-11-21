@@ -19,7 +19,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/.." && pwd)
 cd "$here"
 
-version=2026.11.13
+version=2026.11.21
 # Where the app looks for newer releases (Check for Updates). A fork names its own.
 repo=${IPA_LOOM_REPOSITORY:-xxxxDev/ipa-loom}
 
