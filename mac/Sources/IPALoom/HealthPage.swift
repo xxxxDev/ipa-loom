@@ -8,14 +8,14 @@ struct HealthPage: View {
         ScrollView {
             if settingUp {
                 // Setup gets the page to itself; the health details come back when it is done.
-                SetupFlow().frame(maxWidth: 760).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.vertical, 20)
+                SetupFlow().frame(maxWidth: 860).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.vertical, 20)
             } else {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 12) {
                         Image(systemName: symbol).font(.system(size: 28)).foregroundStyle(color)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(title).font(.title3.weight(.semibold))
+                            Text(title).font(.section.weight(.semibold))
                             Text(explanation).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer()
@@ -37,12 +37,12 @@ struct HealthPage: View {
                     Divider()
                     row("Apple developer tools", model.health == .toolsMissing ? "Not installed" : "Installed") { EmptyView() }
                 }
-                .glassCard(padding: 14)
+                .glassCard(padding: 20)
 
                 Text("Tools, your encrypted account state, the private model and every output stay in the private data folder on this Mac. The app only starts the engine and reads its results.")
-                    .font(.caption).foregroundStyle(Palette.muted).padding(.horizontal, 4)
+                    .font(.small).foregroundStyle(Palette.muted).padding(.horizontal, 4)
             }
-            .padding(20)
+            .padding(28)
             }
         }
     }
@@ -56,7 +56,7 @@ struct HealthPage: View {
             Text(value).foregroundStyle(Palette.muted).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
             trailing()
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
     }
 
     private var symbol: String {

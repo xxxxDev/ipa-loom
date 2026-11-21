@@ -3,24 +3,24 @@ import SwiftUI
 /// The window: a glass sidebar of pages, and the chosen page beside it.
 struct RootView: View {
     @EnvironmentObject var model: AppModel
-    static let size = NSSize(width: 1080, height: 700)
-    static let minimum = NSSize(width: 920, height: 600)
+    static let size = NSSize(width: 1180, height: 780)
+    static let minimum = NSSize(width: 980, height: 640)
 
     var body: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 ForEach(Page.allCases) { page in
                     Button { model.page = page } label: {
                         HStack {
                             Label(page.rawValue, systemImage: page.symbol)
                             Spacer()
                             if page == .library, !model.libraryRecords.isEmpty {
-                                Text("\(model.libraryRecords.count)").font(.caption).opacity(0.7)
+                                Text("\(model.libraryRecords.count)").font(.small).opacity(0.7)
                             }
                         }
-                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .padding(.horizontal, 12).padding(.vertical, 9)
                         .background(page == model.page ? Palette.blue : .clear,
-                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .foregroundStyle(page == model.page ? Color.white : Palette.ink)
                         .contentShape(Rectangle())
                     }
@@ -29,18 +29,20 @@ struct RootView: View {
                 Spacer()
                 HealthChip()
             }
-            .frame(width: 180)
-            .padding(.top, 28)
-            .glassCard(cornerRadius: 16, padding: 8)
-            .padding(10)
+            .frame(width: 212)
+            .padding(.top, 30)
+            .glassCard(cornerRadius: 18, padding: 10)
+            .padding(12)
 
             VStack(alignment: .leading, spacing: 0) {
                 if !(model.page == .health && (model.health == .setupRequired || model.setup != nil)) {
-                    Text(model.page.rawValue).font(.title2.bold()).padding(.horizontal, 20).padding(.top, 16)
+                    Text(model.page.rawValue).font(.pageTitle.bold()).padding(.horizontal, 28).padding(.top, 22)
                 }
                 detail.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
+        .font(.text)
+        .controlSize(.large)
         .background(WindowBackdrop())
         .frame(minWidth: RootView.minimum.width, minHeight: RootView.minimum.height)
     }
@@ -64,12 +66,12 @@ struct HealthChip: View {
             HStack(alignment: .firstTextBaseline, spacing: 7) {
                 Circle().fill(color).frame(width: 7, height: 7)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(.caption.weight(.semibold))
-                    Text(detail).font(.caption2).foregroundStyle(Palette.muted)
+                    Text(title).font(.small.weight(.semibold))
+                    Text(detail).font(.tiny).foregroundStyle(Palette.muted)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(9)
+            .padding(12)
             .background(Palette.ink.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(Rectangle())
         }

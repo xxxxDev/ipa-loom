@@ -43,6 +43,18 @@ struct TerminalText {
     private var afterReturn = false
     private var escape: String?
 
+    /// Removes an answer the terminal echoed back after its question, so what the user typed
+    /// is never part of the output that is shown.
+    mutating func hide(_ answer: String) -> Bool {
+        guard !answer.isEmpty else { return false }
+        if current.hasSuffix(answer) { current.removeLast(answer.count); return true }
+        for index in lines.indices.suffix(4) where lines[index].hasSuffix(answer) {
+            lines[index].removeLast(answer.count)
+            return true
+        }
+        return false
+    }
+
     mutating func feed(_ data: Data) {
         pending.append(data)
         // Keep an unfinished UTF-8 character for the next read.
@@ -90,7 +102,7 @@ struct TerminalText {
 final class SetupSession: ObservableObject {
     enum State: Equatable { case running, passed, failed(String), cancelled }
     static let phases = ["Prepare tools", "Choose an app", "Sign in to Apple",
-                         "Download and build the model", "Verify and finish"]
+                         "Build the model", "Verify and finish"]
 
     let app: InstalledApp
     @Published var state: State = .running
@@ -132,6 +144,12 @@ final class SetupSession: ObservableObject {
     private var answeredApp = false
     private var answeredLink = false
     private var cancelRequested = false
+    /// An answer sent while the terminal was echoing, until its echo has been removed.
+    private var echoed: String?
+    private var passwordWaits = 0
+    /// Cancel was asked for while a tool that must not be interrupted is working: setup stops
+    /// at its next question instead.
+    @Published private(set) var stopping = false
     private var onFinish: (() -> Void)?
 
     init(app: InstalledApp) { self.app = app }
@@ -210,31 +228,40 @@ final class SetupSession: ObservableObject {
     /// not kept anywhere.
     func send(_ answer: String) {
         guard isRunning, let input else { return }
+        // One line of plain text: a control character would edit the line or signal the tool.
+        let line = String(String.UnicodeScalarView(answer.unicodeScalars.filter { $0.value >= 32 && $0.value != 127 }).prefix(512))
         prompt = nil
         generation += 1
-        try? input.write(contentsOf: Data((answer + "\n").utf8))
+        echoed = echo ? line : nil
+        try? input.write(contentsOf: Data((line + "\n").utf8))
     }
 
-    /// Stops setup so the engine rolls back what it staged. A tool waiting for an answer is
-    /// told there is none (end of input), which it reports as an ordinary failure; interrupting
-    /// it there would leave the engine unsure whether it stopped. Anything else gets Control-C,
-    /// and so does a second request.
+    /// Whether Cancel can act now. Once a sign-in or system tool is working, interrupting it
+    /// would leave the engine unsure it stopped, so setup can only stop at a question.
+    var cancelsNow: Bool { phase <= 2 || prompt != nil }
+
+    /// Stops setup so the engine rolls back what it staged. Before any sign-in or system tool
+    /// has started, that is Control-C. A tool waiting for an answer is told there is none (end
+    /// of input), which it reports as an ordinary failure. A tool that is working is left
+    /// alone, and setup stops at the next question.
     func cancel() {
         guard isRunning, let process else { return }
-        let line = text.current.trimmingCharacters(in: .whitespaces)
-        let asking = prompt != nil || (!line.isEmpty && !line.hasPrefix("> "))
-        prompt = nil
-        if asking, !cancelRequested, let input {
-            cancelRequested = true
-            try? input.write(contentsOf: Data([0x04]))
-        } else {
-            cancelRequested = true
+        cancelRequested = true
+        if phase <= 2 {
+            prompt = nil
             process.interrupt()
+        } else if prompt != nil {
+            prompt = nil
+            generation += 1
+            try? input?.write(contentsOf: Data([0x04]))
+        } else {
+            stopping = true
         }
     }
 
     private func received(_ data: Data) {
         text.feed(data)
+        if let answer = echoed, text.hide(answer) { echoed = nil }
         for line in text.lines.suffix(12) {
             if let match = line.range(of: #"^\[(\d)/5\] "#, options: .regularExpression),
                let number = Int(line[match].dropFirst().prefix(1)) {
@@ -262,10 +289,25 @@ final class SetupSession: ObservableObject {
         } else if line.contains("Matching App Store link or IPA"), !answeredLink {
             answeredLink = true
             send(app.storeLink)
+        } else if stopping {
+            stopping = false
+            generation += 1
+            try? input?.write(contentsOf: Data([0x04]))
         } else if line.lowercased().hasPrefix("enter password"), let password = heldPassword {
+            // Only once the tool has switched echo off, so the password cannot be echoed back.
+            if echo, passwordWaits < 10 {
+                passwordWaits += 1
+                let seen = generation
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard let self, self.generation == seen, self.isRunning else { return }
+                    self.waiting()
+                }
+                return
+            }
             heldPassword = nil
             asked.append(line)
-            send(password)
+            if echo { prompt = line } else { send(password) }
         } else if !echo || [":", "?", ">"].contains(where: line.hasSuffix) {
             asked.append(line)
             prompt = line
@@ -274,11 +316,16 @@ final class SetupSession: ObservableObject {
 
     private func finished(code: Int32, rest: Data) {
         if !rest.isEmpty { text.feed(rest) }
+        if let answer = echoed { _ = text.hide(answer) }
+        echoed = nil
         prompt = nil
         heldPassword = nil
+        stopping = false
         input = nil
         process = nil
-        if code == 0 {
+        if text.lines.contains(where: { $0.contains("Recovery required") }) {
+            state = .failed("Setup was interrupted while a system tool was working, so its files were kept for inspection. See \"Setup was interrupted\" in docs/OPERATIONS.md before trying again.")
+        } else if code == 0 {
             phase = SetupSession.phases.count + 1
             state = .passed
         } else if cancelRequested {

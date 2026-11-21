@@ -8,11 +8,11 @@ struct DecryptPage: View {
 
     var body: some View {
         if let session = model.session {
-            RunView(session: session).padding(20)
+            RunView(session: session).padding(28)
         } else if model.health == .ready || model.health == .checking {
             TargetEntry()
         } else {
-            NotReadyNotice().padding(20)
+            NotReadyNotice().padding(28)
         }
     }
 }
@@ -33,7 +33,7 @@ struct TargetEntry: View {
                 HStack(spacing: 10) {
                     Image(systemName: "link").foregroundStyle(Palette.muted)
                     TextField("https://apps.apple.com/app/id123456789", text: $text)
-                        .textFieldStyle(.plain).font(.title3).onSubmit(start)
+                        .textFieldStyle(.plain).font(.section).onSubmit(start)
                     Button("Decrypt", action: start).controlSize(.large).primaryButtonStyle()
                         .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
@@ -42,9 +42,9 @@ struct TargetEntry: View {
                 .padding(.top, 24)
 
                 VStack(spacing: 6) {
-                    Text("Drop an .ipa or an installed .app here").font(.headline)
+                    Text("Drop an .ipa or an installed .app here").font(.heading)
                     Text("Installed iPhone and iPad apps from the App Store or TestFlight are supported.\nA TestFlight beta must be installed first.")
-                        .font(.callout).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                        .font(.note).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                     Button("Choose a File…", action: choose).secondaryButtonStyle().padding(.top, 6)
                 }
                 .frame(maxWidth: .infinity).padding(22)
@@ -61,7 +61,7 @@ struct TargetEntry: View {
                 let recent = Array(model.libraryRecords.prefix(3))
                 if !recent.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("RECENT").font(.caption.weight(.semibold)).foregroundStyle(Palette.muted).padding(.leading, 6)
+                        Text("RECENT").font(.small.weight(.semibold)).foregroundStyle(Palette.muted).padding(.leading, 6)
                         VStack(spacing: 0) {
                             ForEach(recent) { record in
                                 HStack(spacing: 12) {
@@ -69,12 +69,12 @@ struct TargetEntry: View {
                                     VStack(alignment: .leading, spacing: 1) {
                                         Text(record.displayName)
                                         Text([record.app?.version, record.startedDate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
-                                            .font(.caption).foregroundStyle(Palette.muted)
+                                            .font(.small).foregroundStyle(Palette.muted)
                                     }
                                     Spacer()
                                     if record.verified { Tag(text: "Verified", color: Palette.green) }
                                 }
-                                .padding(.vertical, 8)
+                                .padding(.vertical, 12)
                                 if record.id != recent.last?.id { Divider() }
                             }
                         }
@@ -83,9 +83,9 @@ struct TargetEntry: View {
                     .padding(.top, 26)
                 }
             }
-            .frame(maxWidth: 680)
+            .frame(maxWidth: 760)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 20).padding(.bottom, 24)
+            .padding(.horizontal, 28).padding(.bottom, 24)
         }
     }
 
@@ -114,13 +114,13 @@ struct RunView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(spacing: 14) {
                         LetterTile(name: session.title, size: 44)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(session.title).font(.title3.weight(.semibold))
-                            Text(subtitle).font(.callout).foregroundStyle(Palette.muted).lineLimit(1).truncationMode(.middle)
+                            Text(session.title).font(.section.weight(.semibold))
+                            Text(subtitle).font(.note).foregroundStyle(Palette.muted).lineLimit(1).truncationMode(.middle)
                         }
                         Spacer()
                         if session.isRunning {
@@ -130,13 +130,13 @@ struct RunView: View {
                         }
                     }
                     ProgressView(value: session.progress).tint(barColor)
-                    Text(statusLine).font(.callout).foregroundStyle(statusColor)
+                    Text(statusLine).font(.note).foregroundStyle(statusColor)
                 }
                 .glassCard()
 
-                HStack(alignment: .top, spacing: 14) {
+                HStack(alignment: .top, spacing: 20) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Steps").font(.headline)
+                        Text("Steps").font(.heading)
                         ForEach(session.steps) { step in
                             HStack(spacing: 10) {
                                 StepMark(state: step.state)
@@ -150,7 +150,7 @@ struct RunView: View {
                     .glassCard()
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Files").font(.headline)
+                        Text("Files").font(.heading)
                         let record = session.record
                         FileRow(title: "Encrypted (original)", file: record.flatMap(model.encrypted),
                                 missing: session.kind == .store ? (session.isRunning ? "Kept when the run passes" : "Not kept") : session.kind == .file ? "Your own file, not copied" : "Not available: read from the installed app",
@@ -158,7 +158,7 @@ struct RunView: View {
                         FileRow(title: "Decrypted", file: session.state == .passed ? record.flatMap(model.output) : nil,
                                 missing: record?.outputFilename ?? "Pending", encrypted: false)
                         Text("The output is not re-signed. A passed verification is not Apple signature trust or proof that the app installs or runs.")
-                            .font(.caption).foregroundStyle(Palette.muted).padding(.top, 4)
+                            .font(.small).foregroundStyle(Palette.muted).padding(.top, 4)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .glassCard()
@@ -166,7 +166,7 @@ struct RunView: View {
 
                 DisclosureGroup("Engine output", isExpanded: $showLog) {
                     Text(session.log.suffix(40).joined(separator: "\n"))
-                        .font(.caption.monospaced()).foregroundStyle(Palette.muted)
+                        .font(.small.monospaced()).foregroundStyle(Palette.muted)
                         .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).padding(.top, 6)
                 }
                 .glassCard(padding: 12)
@@ -222,7 +222,7 @@ struct StepMark: View {
             case .waiting: Image(systemName: "circle").foregroundStyle(Palette.muted)
             }
         }
-        .font(.title3).frame(width: 22, height: 22)
+        .font(.section).frame(width: 22, height: 22)
     }
 }
 
@@ -232,7 +232,7 @@ struct NotReadyNotice: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label("IPA Loom is not ready to decrypt yet", systemImage: "exclamationmark.triangle.fill")
-                .font(.headline).foregroundStyle(Palette.amber)
+                .font(.heading).foregroundStyle(Palette.amber)
             Text("Open Setup & Health to see what is missing and how to finish it.").foregroundStyle(Palette.muted)
             Button("Open Setup & Health") { model.page = .health }.primaryButtonStyle()
         }

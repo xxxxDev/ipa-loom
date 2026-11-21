@@ -25,16 +25,16 @@ struct AppPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Welcome to IPA Loom").font(.title.bold())
+                Text("Welcome to IPA Loom").font(.hero.bold())
                 Text("A one-time setup builds your private decryption model.")
-                    .font(.title3).foregroundStyle(Palette.muted)
+                    .font(.section).foregroundStyle(Palette.muted)
             }
             PhaseStrip(current: 2, running: true, started: false)
 
             if model.installedApps.isEmpty {
                 VStack(alignment: .leading, spacing: 14) {
                     Label("Install one iPhone or iPad app first", systemImage: "square.and.arrow.down")
-                        .font(.headline).foregroundStyle(Palette.amber)
+                        .font(.heading).foregroundStyle(Palette.amber)
                     ForEach(Array(["Open the App Store on this Mac and search for any free app you use on iPhone.",
                                    "Under the search field, choose \"iPhone & iPad Apps\", then install the app.",
                                    "Open the app once, then come back and choose Check Again."].enumerated()), id: \.offset) { index, step in
@@ -53,19 +53,19 @@ struct AppPicker: View {
                 .glassCard(padding: 22)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Pick one iPhone or iPad app installed from the App Store").font(.headline)
+                    Text("Pick one iPhone or iPad app installed from the App Store").font(.heading)
                     VStack(spacing: 0) {
                         ForEach(model.installedApps) { app in
                             Button { picked = app } label: {
                                 HStack(spacing: 14) {
                                     LetterTile(name: app.name, size: 38)
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(app.name).font(.body.weight(.medium))
-                                        Text("Version \(app.version)").font(.callout).foregroundStyle(Palette.muted)
+                                        Text(app.name).font(.text.weight(.medium))
+                                        Text("Version \(app.version)").font(.note).foregroundStyle(Palette.muted)
                                     }
                                     Spacer()
                                     Image(systemName: picked == app ? "largecircle.fill.circle" : "circle")
-                                        .font(.title3).foregroundStyle(picked == app ? Palette.blue : Palette.muted)
+                                        .font(.section).foregroundStyle(picked == app ? Palette.blue : Palette.muted)
                                 }
                                 .padding(.horizontal, 16).padding(.vertical, 12)
                                 .background(picked == app ? Palette.blue.opacity(0.16) : .clear)
@@ -78,11 +78,11 @@ struct AppPicker: View {
                     .glassCard(padding: 0)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     Text("It is used once to build the model and becomes your first decrypted app. Keep it at its current App Store version.")
-                        .font(.callout).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                        .font(.note).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            if let note { Text(note).font(.callout).foregroundStyle(Palette.amber) }
+            if let note { Text(note).font(.note).foregroundStyle(Palette.amber) }
 
             HStack(spacing: 10) {
                 Button("Choose Another App…", action: choose).buttonStyle(.link)
@@ -97,7 +97,7 @@ struct AppPicker: View {
             .controlSize(.large)
 
             Text("Next: Apple sign-in and your Mac administrator password. Both go straight to the sign-in and system tools on this Mac; the app saves neither.")
-                .font(.callout).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                .font(.note).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
@@ -125,7 +125,7 @@ struct AppPicker: View {
 struct NumberDot: View {
     var number: Int
     var body: some View {
-        Text("\(number)").font(.caption.weight(.bold)).foregroundStyle(.white)
+        Text("\(number)").font(.small.weight(.bold)).foregroundStyle(.white)
             .frame(width: 20, height: 20).background(Palette.blue, in: Circle())
     }
 }
@@ -141,13 +141,15 @@ struct SetupRunView: View {
             HStack(spacing: 14) {
                 LetterTile(name: setup.app.name, size: 44)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(heading).font(.title2.bold())
+                    Text(heading).font(.pageTitle.bold())
                     Text("Building the model from \(setup.app.name) \(setup.app.version)")
-                        .font(.callout).foregroundStyle(Palette.muted)
+                        .font(.note).foregroundStyle(Palette.muted)
                 }
                 Spacer()
                 if setup.isRunning {
-                    Button("Cancel") { setup.cancel() }.secondaryButtonStyle()
+                    Button(setup.stopping ? "Stopping…" : "Cancel") { setup.cancel() }.secondaryButtonStyle()
+                        .disabled(setup.stopping)
+                        .help(setup.cancelsNow ? "Stop setup and remove what it prepared" : "This step cannot be interrupted safely. Setup will stop at its next question.")
                 } else if setup.state == .passed {
                     Button("Decrypt an App") { model.setup = nil; model.page = .decrypt }.primaryButtonStyle()
                 } else {
@@ -170,7 +172,7 @@ struct SetupRunView: View {
 
             DisclosureGroup("Setup output", isExpanded: $showOutput) {
                 Text(setup.text.lines.suffix(30).joined(separator: "\n"))
-                    .font(.caption.monospaced()).foregroundStyle(Palette.muted)
+                    .font(.small.monospaced()).foregroundStyle(Palette.muted)
                     .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).padding(.top, 6)
             }
         }
@@ -188,7 +190,7 @@ struct SetupRunView: View {
     }
     private var message: String {
         switch setup.state {
-        case .running: return setup.status
+        case .running: return setup.stopping ? "Stopping at the next question. " + setup.status : setup.status
         case .passed: return "The model is verified. \(setup.app.name) is in your Library as the first decrypted app."
         case .cancelled: return "Nothing was installed. You can start again when you are ready."
         case .failed(let reason): return reason
@@ -214,23 +216,23 @@ struct PhaseStrip: View {
     private static let needsInput: Set<Int> = [2, 3, 4]
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             ForEach(Array(SetupSession.phases.enumerated()), id: \.offset) { index, title in
                 let number = index + 1
                 let done = started && current > number
                 let active = current == number
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 4) {
-                        if done { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
+                        if done { Image(systemName: "checkmark").font(.tiny.weight(.bold)) }
                         Text("\(number) · " + (PhaseStrip.needsInput.contains(number) ? "You" : "Auto"))
-                            .font(.caption.weight(.semibold))
+                            .font(.note.weight(.semibold))
                     }
                     .foregroundStyle(done ? Palette.green : active ? (running ? Palette.blue : Palette.red) : Palette.muted)
-                    Text(title).font(.caption).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                    Text(title).font(.text.weight(active ? .semibold : .regular)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(active ? Palette.ink : Palette.muted)
                 }
-                .padding(.horizontal, 12).padding(.vertical, 10)
-                .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
+                .padding(.horizontal, 14).padding(.vertical, 14)
+                .frame(maxWidth: .infinity, minHeight: 86, alignment: .topLeading)
                 .background(Color.white.opacity(active ? 0.10 : 0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(active ? Palette.blue.opacity(running ? 0.9 : 0) : .clear, lineWidth: 1.5))
@@ -249,8 +251,8 @@ struct QuestionForm: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label(title, systemImage: symbol).font(.title3.weight(.semibold))
-            Text(explanation).font(.callout).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            Label(title, systemImage: symbol).font(.section.weight(.semibold))
+            Text(explanation).font(.note).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
             switch question {
             case .appleAccount:
                 VStack(spacing: 10) {
@@ -273,7 +275,7 @@ struct QuestionForm: View {
             }
             HStack {
                 Text("Passed straight to the tool that asked. The app saves none of it.")
-                    .font(.caption).foregroundStyle(Palette.muted)
+                    .font(.small).foregroundStyle(Palette.muted)
                 Spacer()
                 Button(question == .appleAccount ? "Sign In" : "Continue", action: submit)
                     .primaryButtonStyle().disabled(first.isEmpty)

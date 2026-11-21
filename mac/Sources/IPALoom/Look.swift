@@ -16,7 +16,7 @@ enum GlassLook {
 
 extension View {
     /// A rounded glass panel around a group of content.
-    @ViewBuilder func glassCard(cornerRadius: CGFloat = 18, padding: CGFloat = 16) -> some View {
+    @ViewBuilder func glassCard(cornerRadius: CGFloat = 20, padding: CGFloat = 22) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         if #available(macOS 26, *), !GlassLook.plain {
             self.padding(padding).glassEffect(.regular, in: shape)
@@ -51,6 +51,19 @@ extension View {
             self.buttonStyle(.bordered)
         }
     }
+}
+
+/// The app's type sizes, a step larger than the system's small defaults for a window that is
+/// read at arm's length.
+extension Font {
+    static let tiny = Font.system(size: 12)
+    static let small = Font.system(size: 13)
+    static let note = Font.system(size: 14)
+    static let text = Font.system(size: 15)
+    static let heading = Font.system(size: 15, weight: .semibold)
+    static let section = Font.system(size: 18)
+    static let pageTitle = Font.system(size: 24)
+    static let hero = Font.system(size: 30)
 }
 
 /// The app's colours: the logo's blue on dark paper. The app has one look, dark.
@@ -120,7 +133,7 @@ struct Tag: View {
     var text: String
     var color: Color
     var body: some View {
-        Text(text).font(.caption.weight(.semibold)).foregroundStyle(color)
+        Text(text).font(.small.weight(.semibold)).foregroundStyle(color)
             .padding(.horizontal, 9).padding(.vertical, 3)
             .background(color.opacity(0.16), in: Capsule())
             .overlay(Capsule().strokeBorder(color.opacity(0.35), lineWidth: 1))
@@ -138,15 +151,15 @@ struct FileRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: encrypted ? "lock.doc" : "doc.zipper")
-                .font(.title3).foregroundStyle(encrypted ? Palette.amber : Palette.green).frame(width: 26)
+                .font(.section).foregroundStyle(encrypted ? Palette.amber : Palette.green).frame(width: 26)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.callout)
+                Text(title).font(.note)
                 Text(file.map { "\($0.name) · \(ByteCountFormatter.string(fromByteCount: $0.size, countStyle: .file))" } ?? missing)
-                    .font(.caption).foregroundStyle(Palette.muted).lineLimit(1).truncationMode(.middle)
+                    .font(.small).foregroundStyle(Palette.muted).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 8)
             if let file {
-                Button("Show in Finder") { model.reveal(file) }.buttonStyle(.link).font(.caption)
+                Button("Show in Finder") { model.reveal(file) }.buttonStyle(.link).font(.small)
             }
         }
         .padding(.horizontal, 10).padding(.vertical, 8)

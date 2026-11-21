@@ -14,16 +14,16 @@ struct LibraryPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                TextField("Search", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 240)
+                TextField("Search", text: $search).textFieldStyle(.roundedBorder).frame(maxWidth: 300)
                 Spacer()
                 Button { model.refresh() } label: { Label("Refresh", systemImage: "arrow.clockwise") }.secondaryButtonStyle()
             }
-            .padding(.horizontal, 20).padding(.top, 12)
+            .padding(.horizontal, 28).padding(.top, 12)
 
             if model.libraryRecords.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "square.grid.2x2").font(.system(size: 34)).foregroundStyle(Palette.muted)
-                    Text("No decrypted apps yet").font(.headline)
+                    Text("No decrypted apps yet").font(.heading)
                     Text("Apps you decrypt appear here with their files.").foregroundStyle(Palette.muted)
                     Button("Decrypt an App") { model.page = .decrypt }.primaryButtonStyle().padding(.top, 4)
                 }
@@ -33,9 +33,9 @@ struct LibraryPage: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 360), spacing: 14, alignment: .top)], spacing: 14) {
                         ForEach(shown) { LibraryCard(record: $0) }
                     }
-                    .padding(20)
+                    .padding(28)
                 }
-                Text(summary).font(.callout).foregroundStyle(Palette.muted).padding(.horizontal, 20).padding(.bottom, 14)
+                Text(summary).font(.note).foregroundStyle(Palette.muted).padding(.horizontal, 28).padding(.bottom, 14)
             }
         }
     }
@@ -58,9 +58,9 @@ struct LibraryCard: View {
             HStack(spacing: 12) {
                 LetterTile(name: record.displayName)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(record.displayName).font(.headline).lineLimit(1)
+                    Text(record.displayName).font(.heading).lineLimit(1)
                     Text(["Version \(record.app?.version ?? "?")", record.startedDate?.shortLabel].compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption).foregroundStyle(Palette.muted)
+                        .font(.small).foregroundStyle(Palette.muted)
                 }
                 Spacer()
                 if record.verified { Tag(text: "Verified", color: Palette.green) }
@@ -90,17 +90,17 @@ struct ActivityPage: View {
                                 .foregroundStyle(record.passed ? Palette.green : Palette.red)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(record.displayName)
-                                Text(detail(record)).font(.caption).foregroundStyle(Palette.muted)
+                                Text(detail(record)).font(.small).foregroundStyle(Palette.muted)
                             }
                             Spacer()
-                            Text(record.startedDate?.shortLabel ?? "").font(.caption).foregroundStyle(Palette.muted)
+                            Text(record.startedDate?.shortLabel ?? "").font(.small).foregroundStyle(Palette.muted)
                         }
                         .padding(.vertical, 9)
                         if record.id != model.records.last?.id { Divider() }
                     }
                 }
                 .glassCard(padding: 14)
-                .padding(20)
+                .padding(28)
             }
         }
     }

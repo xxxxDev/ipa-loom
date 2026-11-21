@@ -61,6 +61,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let run = model.session, setup = model.setup
         guard run?.isRunning == true || setup?.isRunning == true else { return .terminateNow }
+        if let setup, setup.isRunning, !setup.cancelsNow {
+            // A sign-in or system tool is working: stopping it now leaves files to clean up by hand.
+            let alert = NSAlert()
+            alert.messageText = "Setup is in the middle of a step"
+            alert.informativeText = "This step cannot be stopped safely. Quitting now can leave setup files that need manual recovery."
+            alert.addButton(withTitle: "Keep Running")
+            alert.addButton(withTitle: "Quit Anyway")
+            if alert.runModal() == .alertFirstButtonReturn { return .terminateCancel }
+            return .terminateNow
+        }
         run?.cancel()
         setup?.cancel()
         Task { @MainActor in

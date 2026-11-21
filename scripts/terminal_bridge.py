@@ -10,8 +10,10 @@ stored, logged or inspected.
 
 Standard error carries one line, "echo=0" or "echo=1", each time the command turns typed
 echo off or on: echo is off while it reads a password, so the caller can hide the field.
-An interrupt or terminate signal is typed to the command as Control-C. The exit code is the
-command's own, or 128 plus the signal that ended it.
+An interrupt or terminate signal is typed to the command as Control-C. If the caller goes
+away (standard input closes), the command is told there is no more input and, should it
+still be running a few seconds later, gets Control-C: it is never left waiting for an answer
+nobody can give. The exit code is the command's own, or 128 plus the signal that ended it.
 """
 import errno
 import fcntl
@@ -22,6 +24,7 @@ import signal
 import struct
 import sys
 import termios
+import time
 
 
 def main(command):
@@ -51,6 +54,8 @@ def main(command):
     signal.signal(signal.SIGTERM, interrupt)
     echo = None
     sources = [master, 0, wake_read]
+    interrupt_at = None
+    listening = True
     while True:
         try:
             ready, _, _ = select.select(sources, [], [], 0.2)
@@ -63,6 +68,9 @@ def main(command):
         if state != echo:
             echo = state
             os.write(2, b'echo=1\n' if echo else b'echo=0\n')
+        if interrupt_at is not None and time.monotonic() >= interrupt_at:
+            interrupt_at = None
+            os.write(master, b'\x03')
         if wake_read in ready:
             os.read(wake_read, 64)
             os.write(master, b'\x03')
@@ -72,8 +80,10 @@ def main(command):
                 while data:
                     data = data[os.write(master, data):]
             else:
-                # The caller closed its side: stop relaying input, keep relaying output.
+                # The caller is gone: end the command's input, then interrupt it if it stays.
                 sources.remove(0)
+                os.write(master, b'\x04')
+                interrupt_at = time.monotonic() + 5
         if master in ready:
             try:
                 data = os.read(master, 65536)
@@ -84,8 +94,12 @@ def main(command):
                 data = b''
             if not data:
                 break
-            while data:
-                data = data[os.write(1, data):]
+            while data and listening:
+                try:
+                    data = data[os.write(1, data):]
+                except BrokenPipeError:
+                    # Nobody is reading any more: keep draining so the command can finish.
+                    listening = False
     _, status = os.waitpid(child, 0)
     return os.waitstatus_to_exitcode(status) if os.WIFEXITED(status) else 128 + os.WTERMSIG(status)
 
