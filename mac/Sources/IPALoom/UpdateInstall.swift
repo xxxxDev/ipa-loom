@@ -27,20 +27,61 @@ extension Updater {
         if bundle.path.contains("/AppTranslocation/") {
             return "Move IPA Loom to Applications first: macOS is running it from a temporary place."
         }
-        let folder = bundle.deletingLastPathComponent().path
-        if !FileManager.default.isWritableFile(atPath: folder) { return "IPA Loom cannot replace itself in \(folder)." }
-        // In a folder other accounts can write, someone else could put their own app in its place.
-        var info = stat()
-        guard stat(folder, &info) == 0, info.st_uid == getuid() || info.st_uid == 0, info.st_mode & 0o002 == 0,
-              info.st_mode & 0o020 == 0 || info.st_gid == 80 else {
-            return "IPA Loom is in a folder other accounts can change (\(folder)). Move it to Applications first."
+        if let why = Self.unsafePlace(bundle, staging: Self.cachesFolder) {
+            return "IPA Loom cannot replace itself where it is (\(why)). Move it to Applications, or update with Homebrew or from the release page."
         }
         return nil
     }
 
+    /// `url` with symbolic links resolved: the path the checks, the exchange and the reopen all use.
+    /// (realpath, which keeps /private where Foundation's own resolving drops it.)
+    nonisolated static func resolved(_ url: URL) -> URL {
+        guard let real = realpath(url.path, nil) else { return url.standardizedFileURL }
+        defer { free(real) }
+        return URL(fileURLWithPath: String(cString: real), isDirectory: true)
+    }
+
+    /// Why an app in `folder` cannot safely be replaced by this user, or nil. The folder and
+    /// every folder above it must belong to this user or to root, and nobody else may write
+    /// to them (the admin group may, as it may in /Applications): otherwise another account
+    /// could rename or replace what is there while the update puts the new app in.
+    nonisolated static func unsafeFolder(_ folder: URL) -> String? {
+        var path = resolved(folder).path
+        guard access(path, W_OK) == 0 else { return "this account cannot write to \(path)" }
+        while true {
+            var info = stat()
+            guard lstat(path, &info) == 0 else { return "\(path) cannot be read" }
+            guard info.st_mode & S_IFMT == S_IFDIR else { return "\(path) is not a folder" }
+            guard info.st_uid == getuid() || info.st_uid == 0 else { return "\(path) belongs to another account" }
+            if info.st_mode & S_IWOTH != 0 { return "every account can write to \(path)" }
+            if info.st_mode & S_IWGRP != 0, info.st_gid != 80 { return "a group other than admin can write to \(path)" }
+            if path == "/" { return nil }
+            path = (path as NSString).deletingLastPathComponent
+            if path.isEmpty { path = "/" }
+        }
+    }
+
+    /// Why the app at `app` cannot safely change places with a copy staged under `staging`,
+    /// or nil. The app must be this user's own folder, in a folder that is safe
+    /// (`unsafeFolder`), on the same volume as `staging`: the exchange cannot cross volumes.
+    nonisolated static func unsafePlace(_ app: URL, staging: URL) -> String? {
+        let path = resolved(app).path
+        var info = stat()
+        guard lstat(path, &info) == 0, info.st_mode & S_IFMT == S_IFDIR else { return "\(path) is not a folder" }
+        guard info.st_uid == getuid() else { return "\(path) belongs to another account" }
+        if let why = unsafeFolder(resolved(app).deletingLastPathComponent()) { return why }
+        var here = stat(), there = stat()
+        guard lstat((path as NSString).deletingLastPathComponent, &here) == 0, stat(staging.path, &there) == 0 else {
+            return "\(staging.path) cannot be read"
+        }
+        guard here.st_dev == there.st_dev else { return "it is on another disk than your home folder" }
+        return nil
+    }
+
+    private static var cachesFolder: URL { FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0] }
+
     private static var updatesFolder: URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("io.ipaloom.app", isDirectory: true).appendingPathComponent("updates", isDirectory: true)
+        cachesFolder.appendingPathComponent("io.ipaloom.app", isDirectory: true).appendingPathComponent("updates", isDirectory: true)
     }
 
     /// Removes what an earlier install left behind: its download, and its disk image if it
@@ -72,7 +113,8 @@ extension Updater {
             return
         }
         let fm = FileManager.default
-        let dest = Bundle.main.bundleURL
+        // The path the checks looked at is the one exchanged and opened.
+        let dest = Self.resolved(Bundle.main.bundleURL)
         // Staged in this user's own folder (0700), not next to the app: nobody else can put
         // anything at that path before the copy, or change it after the check.
         // Each install has a folder of its own, so two copies of the app never share one.
@@ -131,12 +173,13 @@ extension Updater {
             step("Restarting into IPA Loom \(update.version)…")
             let script = dir.appendingPathComponent("finish.sh")
             try Self.finishScript.write(to: script, atomically: true, encoding: .utf8)
+            // Looked at again now: the folders could have changed while the download ran.
+            if let why = Self.unsafePlace(dest, staging: dir) { throw Failure("IPA Loom cannot replace itself where it is (\(why))") }
             // The new app and this one change places in one step: the path always holds a
             // whole app, and it works only within one volume. From here the old app (this
             // one, still running) is the copy in the staging folder.
             guard renamex_np(staged.path, dest.path, UInt32(RENAME_SWAP)) == 0 else {
-                throw Failure(errno == EXDEV ? "IPA Loom is on another disk than your home folder; update it by hand"
-                                             : "the new app could not take this one's place (\(String(cString: strerror(errno))))")
+                throw Failure("the new app could not take this one's place (\(String(cString: strerror(errno))))")
             }
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")

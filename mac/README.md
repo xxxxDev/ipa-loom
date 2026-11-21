@@ -45,7 +45,7 @@ The app looks for a newer release once a day, and when you choose Check for Upda
 
 Nothing is downloaded until you choose Install and Restart. The app then downloads the release's disk image and installs it only if every check passes: the image matches the SHA-256 GitHub records for it, and the app inside is signed with the same certificate as the one running and is the version offered. The new app and the old one change places in one step, so there is never a moment without an app, and IPA Loom then restarts. It will not install while a decryption or setup is running.
 
-A copy that cannot do this safely does not try: a build signed ad hoc (which is what `mac/build-app.sh` makes without a certificate), one macOS runs from a temporary place, one in a folder it cannot write or that other accounts can change, or one on another disk than your home folder. It shows the release page and the Homebrew command instead.
+A copy that cannot do this safely does not try: a build signed ad hoc (which is what `mac/build-app.sh` makes without a certificate), one macOS runs from a temporary place, one in a folder it cannot write, one whose folder (or any folder above it) other accounts can change, or one on another disk than your home folder. This is checked before anything is downloaded and again just before the swap. It shows the release page and the Homebrew command instead.
 
 An update replaces only the app. Your setup, model and Library stay in the private data folder.
 
