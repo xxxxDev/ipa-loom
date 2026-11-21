@@ -46,6 +46,9 @@ enum Snapshot {
         admin.phase = 4
         admin.prompt = "Password:"
         admin.echo = false
+        let done = SetupSession(app: samples[0])
+        done.phase = 6
+        done.state = .passed
 
         let shots: [(String, Page, Health, RunSession?)] = [
             ("decrypt", .decrypt, .ready, nil),
@@ -58,6 +61,7 @@ enum Snapshot {
             ("health-setup-no-app", .health, .setupRequired, nil),
             ("health-setup-asking", .health, .setupRequired, nil),
             ("health-setup-admin", .health, .setupRequired, nil),
+            ("health-setup-done", .health, .ready, nil),
         ]
         Task { @MainActor in
             if live {
@@ -72,7 +76,7 @@ enum Snapshot {
                     model.health = health
                 }
                 model.installedApps = name == "health-setup-no-app" ? [] : samples
-                model.setup = name == "health-setup-asking" ? asking : name == "health-setup-admin" ? admin : nil
+                model.setup = name == "health-setup-asking" ? asking : name == "health-setup-admin" ? admin : name == "health-setup-done" ? done : nil
                 model.page = page
                 model.session = session
                 let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: -20000, y: 0), size: RootView.size),

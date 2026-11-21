@@ -191,3 +191,10 @@ struct StartButtonStyle: ButtonStyle {
             .background(Color(red: 0.12, green: 0.64, blue: 0.33).opacity(configuration.isPressed ? 0.75 : 1), in: Capsule())
     }
 }
+
+/// A label whose icon follows its title, for buttons that lead onward.
+struct TrailingIconLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 8) { configuration.title; configuration.icon }
+    }
+}

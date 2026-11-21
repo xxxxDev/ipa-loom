@@ -142,7 +142,7 @@ struct SetupRunView: View {
                 LetterTile(name: setup.app.name, size: 44)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(heading).font(.pageTitle.bold())
-                    Text("Building the model from \(setup.app.name) \(setup.app.version)")
+                    Text((setup.state == .passed ? "Model built from " : "Building the model from ") + "\(setup.app.name) \(setup.app.version)")
                         .font(.note).foregroundStyle(Palette.muted)
                 }
                 Spacer()
@@ -150,10 +150,6 @@ struct SetupRunView: View {
                     Button(setup.stopping ? "Stopping…" : "Cancel") { setup.cancel() }.secondaryButtonStyle()
                         .disabled(setup.stopping)
                         .help(setup.cancelsNow ? "Stop setup and remove what it prepared" : "This step cannot be interrupted safely. Setup will stop at its next question.")
-                } else if setup.state == .passed {
-                    Button("Decrypt an App") { model.setup = nil; model.page = .decrypt }.primaryButtonStyle()
-                } else {
-                    Button("Try Again") { model.setup = nil }.primaryButtonStyle()
                 }
             }
 
@@ -162,12 +158,27 @@ struct SetupRunView: View {
             if let question = setup.question {
                 QuestionForm(setup: setup, question: question)
             } else {
-                HStack(spacing: 10) {
-                    if setup.isRunning { ProgressView().controlSize(.small) }
-                    Text(message).foregroundStyle(messageColor).fixedSize(horizontal: false, vertical: true)
+                // The result and the way onward sit together, where the eye already is.
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 10) {
+                        if setup.isRunning { ProgressView().controlSize(.small) }
+                        if setup.state == .passed { Image(systemName: "checkmark.circle.fill").font(.section).foregroundStyle(Palette.green) }
+                        Text(message).foregroundStyle(messageColor).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if setup.state == .passed {
+                        Text("Next: paste an App Store link or drop an IPA to decrypt another app.").foregroundStyle(Palette.muted)
+                        HStack(spacing: 12) {
+                            Button { model.setup = nil; model.page = .decrypt } label: {
+                                Label("Decrypt an App", systemImage: "arrow.right").labelStyle(TrailingIconLabelStyle())
+                            }.startButtonStyle()
+                            Button("Open Library") { model.setup = nil; model.page = .library }.secondaryButtonStyle()
+                        }
+                    } else if !setup.isRunning {
+                        Button("Try Again") { model.setup = nil }.primaryButtonStyle()
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .glassCard(padding: 18)
+                .glassCard(padding: 20)
             }
 
             DisclosureGroup("Setup output", isExpanded: $showOutput) {
