@@ -35,7 +35,9 @@ struct RootView: View {
             .padding(10)
 
             VStack(alignment: .leading, spacing: 0) {
-                Text(model.page.rawValue).font(.title2.bold()).padding(.horizontal, 20).padding(.top, 16)
+                if !(model.page == .health && (model.health == .setupRequired || model.setup != nil)) {
+                    Text(model.page.rawValue).font(.title2.bold()).padding(.horizontal, 20).padding(.top, 16)
+                }
                 detail.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }

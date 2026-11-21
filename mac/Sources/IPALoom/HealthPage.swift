@@ -6,6 +6,10 @@ struct HealthPage: View {
 
     var body: some View {
         ScrollView {
+            if settingUp {
+                // Setup gets the page to itself; the health details come back when it is done.
+                SetupFlow().frame(maxWidth: 760).frame(maxWidth: .infinity).padding(.horizontal, 28).padding(.vertical, 20)
+            } else {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 12) {
@@ -24,10 +28,6 @@ struct HealthPage: View {
                 }
                 .glassCard()
 
-                if model.health == .setupRequired || model.setup != nil {
-                    SetupFlow()
-                }
-
                 VStack(alignment: .leading, spacing: 0) {
                     row("Private data folder", Paths.dataRoot.path) {
                         Button("Show") { model.showDataFolder() }.buttonStyle(.link)
@@ -43,8 +43,11 @@ struct HealthPage: View {
                     .font(.caption).foregroundStyle(Palette.muted).padding(.horizontal, 4)
             }
             .padding(20)
+            }
         }
     }
+
+    private var settingUp: Bool { model.health == .setupRequired || model.setup != nil }
 
     private func row<Trailing: View>(_ name: String, _ value: String, @ViewBuilder trailing: () -> Trailing) -> some View {
         HStack {

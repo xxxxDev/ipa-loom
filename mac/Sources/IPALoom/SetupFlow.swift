@@ -23,75 +23,83 @@ struct AppPicker: View {
     @ViewState private var note: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("One-time setup").font(.headline)
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Welcome to IPA Loom").font(.title.bold())
+                Text("A one-time setup builds your private decryption model.")
+                    .font(.title3).foregroundStyle(Palette.muted)
+            }
             PhaseStrip(current: 2, running: true, started: false)
-            Text("IPA Loom builds a private decryption model from one iPhone or iPad app that is installed on this Mac from the App Store. The model then decrypts the other apps you choose.")
-                .foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
 
             if model.installedApps.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("No iPhone or iPad app from the App Store is installed yet", systemImage: "square.and.arrow.down")
+                VStack(alignment: .leading, spacing: 14) {
+                    Label("Install one iPhone or iPad app first", systemImage: "square.and.arrow.down")
                         .font(.headline).foregroundStyle(Palette.amber)
                     ForEach(Array(["Open the App Store on this Mac and search for any free app you use on iPhone.",
                                    "Under the search field, choose \"iPhone & iPad Apps\", then install the app.",
-                                   "Open the app once, come back here and choose Check Again."].enumerated()), id: \.offset) { index, step in
-                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                   "Open the app once, then come back and choose Check Again."].enumerated()), id: \.offset) { index, step in
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
                             NumberDot(number: index + 1)
                             Text(step).fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    HStack {
+                    HStack(spacing: 10) {
                         Button("Open App Store") { NSWorkspace.shared.open(URL(string: "macappstore://")!) }.primaryButtonStyle()
                         Button("Check Again") { model.findInstalledApps() }.secondaryButtonStyle()
                     }
-                    .padding(.top, 4)
+                    .controlSize(.large).padding(.top, 4)
                 }
-                .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Palette.amber.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .glassCard(padding: 22)
             } else {
-                Text("CHOOSE AN APP").font(.caption.weight(.semibold)).foregroundStyle(Palette.muted)
-                VStack(spacing: 0) {
-                    ForEach(model.installedApps) { app in
-                        Button { picked = app } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: picked == app ? "largecircle.fill.circle" : "circle")
-                                    .foregroundStyle(picked == app ? Palette.blue : Palette.muted)
-                                LetterTile(name: app.name, size: 30)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(app.name)
-                                    Text("Version \(app.version)").font(.caption).foregroundStyle(Palette.muted)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Pick one iPhone or iPad app installed from the App Store").font(.headline)
+                    VStack(spacing: 0) {
+                        ForEach(model.installedApps) { app in
+                            Button { picked = app } label: {
+                                HStack(spacing: 14) {
+                                    LetterTile(name: app.name, size: 38)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(app.name).font(.body.weight(.medium))
+                                        Text("Version \(app.version)").font(.callout).foregroundStyle(Palette.muted)
+                                    }
+                                    Spacer()
+                                    Image(systemName: picked == app ? "largecircle.fill.circle" : "circle")
+                                        .font(.title3).foregroundStyle(picked == app ? Palette.blue : Palette.muted)
                                 }
-                                Spacer()
+                                .padding(.horizontal, 16).padding(.vertical, 12)
+                                .background(picked == app ? Palette.blue.opacity(0.16) : .clear)
+                                .contentShape(Rectangle())
                             }
-                            .padding(.vertical, 7).contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                            if app != model.installedApps.last { Divider() }
                         }
-                        .buttonStyle(.plain)
-                        if app != model.installedApps.last { Divider() }
                     }
+                    .glassCard(padding: 0)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    Text("It is used once to build the model and becomes your first decrypted app. Keep it at its current App Store version.")
+                        .font(.callout).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
                 }
-                Text("Make sure the app is at its current App Store version. Setup downloads the same version to compare.")
-                    .font(.caption).foregroundStyle(Palette.muted)
             }
 
-            if let note { Text(note).font(.caption).foregroundStyle(Palette.amber) }
+            if let note { Text(note).font(.callout).foregroundStyle(Palette.amber) }
 
-            HStack {
-                Button("Start Setup") { if let picked { model.startSetup(with: picked) } }
-                    .primaryButtonStyle().disabled(picked == nil)
-                Button("Choose Another App…", action: choose).secondaryButtonStyle()
+            HStack(spacing: 10) {
+                Button("Choose Another App…", action: choose).buttonStyle(.link)
+                Button("Use Terminal Instead") { model.openTerminalSetup() }.buttonStyle(.link).padding(.leading, 8)
+                Spacer()
                 if !model.installedApps.isEmpty {
                     Button("Check Again") { model.findInstalledApps() }.secondaryButtonStyle()
+                    Button("Continue") { if let picked { model.startSetup(with: picked) } }
+                        .primaryButtonStyle().disabled(picked == nil)
                 }
-                Spacer()
-                Button("Use Terminal Instead") { model.openTerminalSetup() }.buttonStyle(.link)
             }
-            Text("Setup asks for your Apple Account and your Mac administrator password. The app passes what you type straight to the sign-in and system tools and keeps none of it.")
-                .font(.caption).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            .controlSize(.large)
+
+            Text("Next: Apple sign-in and your Mac administrator password. Both go straight to the sign-in and system tools on this Mac; the app saves neither.")
+                .font(.callout).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard()
         .onAppear {
             model.findInstalledApps()
             if picked == nil, model.installedApps.count == 1 { picked = model.installedApps.first }
@@ -129,13 +137,13 @@ struct SetupRunView: View {
     @ViewState private var showOutput = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                LetterTile(name: setup.app.name, size: 36)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(heading).font(.headline)
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 14) {
+                LetterTile(name: setup.app.name, size: 44)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(heading).font(.title2.bold())
                     Text("Building the model from \(setup.app.name) \(setup.app.version)")
-                        .font(.caption).foregroundStyle(Palette.muted)
+                        .font(.callout).foregroundStyle(Palette.muted)
                 }
                 Spacer()
                 if setup.isRunning {
@@ -152,7 +160,12 @@ struct SetupRunView: View {
             if let question = setup.question {
                 QuestionForm(setup: setup, question: question)
             } else {
-                Text(message).font(.callout).foregroundStyle(messageColor).fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 10) {
+                    if setup.isRunning { ProgressView().controlSize(.small) }
+                    Text(message).foregroundStyle(messageColor).fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassCard(padding: 18)
             }
 
             DisclosureGroup("Setup output", isExpanded: $showOutput) {
@@ -161,8 +174,8 @@ struct SetupRunView: View {
                     .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).padding(.top, 6)
             }
         }
+        .controlSize(.large)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard()
     }
 
     private var heading: String {
@@ -216,8 +229,8 @@ struct PhaseStrip: View {
                     Text(title).font(.caption).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(active ? Palette.ink : Palette.muted)
                 }
-                .padding(.horizontal, 10).padding(.vertical, 8)
-                .frame(maxWidth: .infinity, minHeight: 54, alignment: .topLeading)
+                .padding(.horizontal, 12).padding(.vertical, 10)
+                .frame(maxWidth: .infinity, minHeight: 64, alignment: .topLeading)
                 .background(Color.white.opacity(active ? 0.10 : 0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(active ? Palette.blue.opacity(running ? 0.9 : 0) : .clear, lineWidth: 1.5))
@@ -235,19 +248,22 @@ struct QuestionForm: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: symbol).font(.headline)
+        VStack(alignment: .leading, spacing: 14) {
+            Label(title, systemImage: symbol).font(.title3.weight(.semibold))
             Text(explanation).font(.callout).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
             switch question {
             case .appleAccount:
-                TextField("Apple ID (email address)", text: $first).textContentType(.username).focused($focused).onSubmit(submit)
-                SecureField("Password", text: $second).onSubmit(submit)
+                VStack(spacing: 10) {
+                    TextField("Apple ID (email address)", text: $first).textContentType(.username).focused($focused).onSubmit(submit)
+                    SecureField("Password", text: $second).onSubmit(submit)
+                }
+                .frame(maxWidth: 380)
             case .applePassword:
-                SecureField("Apple Account password", text: $first).focused($focused).onSubmit(submit)
+                SecureField("Apple Account password", text: $first).focused($focused).onSubmit(submit).frame(maxWidth: 380)
             case .verificationCode:
                 TextField("6-digit code", text: $first).focused($focused).onSubmit(submit).frame(maxWidth: 180)
             case .adminPassword:
-                SecureField("Mac administrator password", text: $first).focused($focused).onSubmit(submit)
+                SecureField("Mac administrator password", text: $first).focused($focused).onSubmit(submit).frame(maxWidth: 380)
             case .other:
                 if setup.echo {
                     TextField("Your answer", text: $first).focused($focused).onSubmit(submit)
@@ -264,7 +280,7 @@ struct QuestionForm: View {
             }
         }
         .textFieldStyle(.roundedBorder)
-        .padding(14)
+        .padding(22)
         .background(Palette.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .onAppear { focused = true }
         .id(question)
