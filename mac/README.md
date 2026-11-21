@@ -5,7 +5,7 @@ Install with `brew install --cask xxxxDev/tap/ipa-loom`, or download the disk im
 A native window over the same engine the terminal command runs. It starts the engine, reads the records the engine writes, and shows your decrypted apps. It holds no account, model or IPA of its own: everything stays in the private data folder (`~/Library/Application Support/IPA Loom`), shared with `ipa-loom.command`.
 
 <p align="center">
-  <img src="../docs/assets/screens/ipa-loom-app-setup.png" alt="First setup in the app: five steps across the top, a list of installed apps to pick from, and a Continue button at the bottom right; sample data" width="820">
+  <img src="../docs/assets/screens/ipa-loom-app-setup-dark.svg" alt="First setup in the app: choose an installed app, then the tools, Apple sign-in, the administrator password and the model, until IPA Loom is ready; fictional account and apps, sample data, not a real run" width="820">
 </p>
 <p align="center">
   <img src="../docs/assets/screens/ipa-loom-app-library.png" alt="The Library page with two fictional decrypted apps, each with its encrypted and decrypted file; sample data" width="820">

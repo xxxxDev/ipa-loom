@@ -71,7 +71,7 @@ First use builds pinned tools and guides Apple login, matching-app checks, model
 ### Mac app (preview)
 
 <p align="center">
-  <img src="docs/assets/screens/ipa-loom-app-decrypt.png" alt="The IPA Loom Mac app decrypting a fictional Weather Lens app: steps done and running on the left, the encrypted and decrypted files on the right; sample data, not a real run" width="900">
+  <img src="docs/assets/screens/ipa-loom-app-decrypt-dark.svg" alt="The IPA Loom Mac app: paste an App Store link, press Decrypt, the five steps finish and the decrypted app appears in the Library; fictional Weather Lens app, sample data, not a real run" width="900">
 </p>
 
 Prefer a window to a terminal? The IPA Loom app (macOS 14 or later) runs the same engine, does first-time setup in its own window, and shows your decrypted apps in a Library. Install it with Homebrew:
