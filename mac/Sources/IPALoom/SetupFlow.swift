@@ -171,9 +171,21 @@ struct SetupRunView: View {
             }
 
             DisclosureGroup("Setup output", isExpanded: $showOutput) {
-                Text(setup.text.lines.suffix(30).joined(separator: "\n"))
-                    .font(.small.monospaced()).foregroundStyle(Palette.muted)
-                    .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).padding(.top, 6)
+                // Its own scrolling box that follows the newest line, so the page stays put.
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        Text(setup.text.lines.suffix(200).joined(separator: "\n"))
+                            .font(.small.monospaced()).foregroundStyle(Palette.muted)
+                            .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+                            .padding(14).id("end")
+                    }
+                    .frame(height: 220)
+                    .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Palette.line))
+                    .padding(.top, 8)
+                    .onAppear { proxy.scrollTo("end", anchor: .bottom) }
+                    .onChange(of: setup.text.lines.count) { proxy.scrollTo("end", anchor: .bottom) }
+                }
             }
         }
         .controlSize(.large)
