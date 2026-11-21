@@ -165,9 +165,7 @@ struct RunView: View {
                 }
 
                 DisclosureGroup("Engine output", isExpanded: $showLog) {
-                    Text(session.log.suffix(40).joined(separator: "\n"))
-                        .font(.small.monospaced()).foregroundStyle(Palette.muted)
-                        .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled).padding(.top, 6)
+                    OutputBox(lines: session.log, height: 130)
                 }
                 .glassCard(padding: 12)
             }

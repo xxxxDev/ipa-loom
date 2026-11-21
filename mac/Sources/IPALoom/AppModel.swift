@@ -95,10 +95,21 @@ final class RunSession: ObservableObject {
         process.interrupt()
     }
 
+    private static func isProgress(_ line: String) -> Bool {
+        line.range(of: #"^\S+\s+\d{1,3}%"#, options: .regularExpression) != nil
+    }
+
     private func append(_ text: String) {
         for line in text.split(whereSeparator: \.isNewline) {
             let clean = line.trimmingCharacters(in: .whitespaces)
-            if !clean.isEmpty { log.append(clean) }
+            guard !clean.isEmpty else { continue }
+            // A progress line the tool redraws in place replaces its earlier reading.
+            if let last = log.last, RunSession.isProgress(clean), RunSession.isProgress(last),
+               clean.prefix(while: { $0 != " " }) == last.prefix(while: { $0 != " " }) {
+                log[log.count - 1] = clean
+            } else {
+                log.append(clean)
+            }
         }
         if log.count > 400 { log.removeFirst(log.count - 400) }
     }
