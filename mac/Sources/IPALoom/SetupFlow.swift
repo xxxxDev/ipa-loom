@@ -29,7 +29,7 @@ struct AppPicker: View {
                 Text("A one-time setup builds your private decryption model.")
                     .font(.section).foregroundStyle(Palette.muted)
             }
-            PhaseStrip(current: 2, running: true, started: false)
+            PhaseStrip(current: 1, running: true)
 
             if model.installedApps.isEmpty {
                 VStack(alignment: .leading, spacing: 14) {
@@ -157,7 +157,7 @@ struct SetupRunView: View {
                 }
             }
 
-            PhaseStrip(current: setup.phase, running: setup.isRunning)
+            PhaseStrip(current: PhaseStrip.shown(setup.phase), running: setup.isRunning)
 
             if let question = setup.question {
                 QuestionForm(setup: setup, question: question)
@@ -211,15 +211,18 @@ struct SetupRunView: View {
 struct PhaseStrip: View {
     var current: Int
     var running: Bool
-    /// False before setup starts: the first phase has not run yet, the user is choosing.
-    var started = true
-    private static let needsInput: Set<Int> = [2, 3, 4]
+    /// The steps in the order the user meets them: the app is chosen in this window before the
+    /// engine starts, so choosing comes first and the engine's own first two phases (preparing
+    /// tools, then taking the choice it is handed) both show as the second step.
+    static let titles = [SetupSession.phases[1], SetupSession.phases[0]] + SetupSession.phases[2...]
+    static func shown(_ phase: Int) -> Int { phase <= 2 ? 2 : phase }
+    private static let needsInput: Set<Int> = [1, 3, 4]
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(Array(SetupSession.phases.enumerated()), id: \.offset) { index, title in
+            ForEach(Array(PhaseStrip.titles.enumerated()), id: \.offset) { index, title in
                 let number = index + 1
-                let done = started && current > number
+                let done = current > number
                 let active = current == number
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 4) {
