@@ -78,7 +78,7 @@ struct HealthChip: View {
         switch model.health {
         case .ready: return Palette.green
         case .checking: return Palette.muted
-        case .setupRequired: return Palette.amber
+        case .setupRequired, .pendingSetup: return Palette.amber
         default: return Palette.red
         }
     }
@@ -87,6 +87,7 @@ struct HealthChip: View {
         case .ready: return "Ready"
         case .checking: return "Checking"
         case .setupRequired: return "Setup needed"
+        case .pendingSetup: return "Clean-up needed"
         case .toolsMissing: return "Tools missing"
         case .engineMissing: return "Engine missing"
         case .problem: return "Needs attention"

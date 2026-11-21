@@ -70,7 +70,7 @@ IPA Loom 把 IPA 下載、解密、驗證與清理整合在一台 Apple Silicon 
 
 ### Mac App（預覽）
 
-想用視窗而不是終端機？雙擊 `ipa-loom-app.command` 就會建置並開啟 IPA Loom App。它跑的是同一套引擎，並把解密好的 App 列在資料庫頁。首次設定目前仍在終端機完成。詳見 [mac/README.md](mac/README.md)（英文）。
+想用視窗而不是終端機？雙擊 `ipa-loom-app.command` 就會建置並開啟 IPA Loom App。它跑的是同一套引擎，並把解密好的 App 列在資料庫頁。首次設定也能在 App 裡完成。詳見 [mac/README.md](mac/README.md)（英文）。
 
 ## 使用方式
 

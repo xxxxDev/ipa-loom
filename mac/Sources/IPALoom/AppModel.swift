@@ -170,6 +170,8 @@ final class AppModel: ObservableObject {
     @Published var healthDetail = ""
     @Published var records: [RunRecord] = []
     @Published var session: RunSession?
+    @Published var setup: SetupSession?
+    @Published var installedApps: [InstalledApp] = []
     /// Sample data for the layout pictures a debug build draws; never set in the real app.
     var sampleFiles = false
 
@@ -207,6 +209,8 @@ final class AppModel: ObservableObject {
         healthDetail = lines.joined(separator: "\n")
         if result.code == 0 {
             health = .ready
+        } else if lines.first?.hasPrefix("Pending setup") == true {
+            health = .pendingSetup
         } else if lines.first == "Setup required" {
             health = .setupRequired
         } else {
@@ -235,8 +239,34 @@ final class AppModel: ObservableObject {
         NSWorkspace.shared.open(Paths.dataRoot)
     }
 
-    /// First setup asks for the Apple Account and the Mac's administrator password, which the
-    /// engine takes in a terminal: open its command there.
+    /// Rolls back a setup that was interrupted before it finished.
+    func recoverSetup() async {
+        health = .checking
+        let result = await Engine.capture(["--recover"])
+        await checkHealth()
+        if let result, result.code != 0, case .problem = health {
+            let lines = result.output.split(whereSeparator: \.isNewline).map(String.init)
+            if let stopped = lines.last(where: { $0.hasPrefix("Stopped: ") }) { health = .problem(String(stopped.dropFirst(9))) }
+        }
+    }
+
+    func findInstalledApps() {
+        if sampleFiles { return }
+        installedApps = InstalledApps.discover()
+    }
+
+    /// Starts first setup with the app the user picked to build the model from.
+    func startSetup(with app: InstalledApp) {
+        guard setup?.isRunning != true, session?.isRunning != true else { return }
+        let run = SetupSession(app: app)
+        setup = run
+        run.start { [weak self] in
+            self?.refresh()
+            Task { await self?.checkHealth() }
+        }
+    }
+
+    /// The same setup in Terminal, for anyone who prefers it there.
     func openTerminalSetup() {
         guard let command = Paths.engineRoot?.appendingPathComponent("ipa-loom.command") else { return }
         let terminal = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")

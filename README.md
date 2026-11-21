@@ -70,7 +70,7 @@ First use builds pinned tools and guides Apple login, matching-app checks, model
 
 ### Mac app (preview)
 
-Prefer a window to a terminal? Double-click `ipa-loom-app.command` to build and open the IPA Loom app. It runs the same engine and shows your decrypted apps in a Library. First-time setup still happens in Terminal for now. See [mac/README.md](mac/README.md).
+Prefer a window to a terminal? Double-click `ipa-loom-app.command` to build and open the IPA Loom app. It runs the same engine and shows your decrypted apps in a Library. First-time setup runs in the app too. See [mac/README.md](mac/README.md).
 
 ## Use it
 

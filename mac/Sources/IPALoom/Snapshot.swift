@@ -36,6 +36,17 @@ enum Snapshot {
             """.utf8))
         running.log = ["Checking your App Store session done", "Downloading the app", "Decrypting the app (working)"]
 
+        let samples = [InstalledApp(path: "/Applications/Notes Pro.app", name: "Notes Pro", version: "4.3.3", itemID: 1),
+                       InstalledApp(path: "/Applications/Weather Lens.app", name: "Weather Lens", version: "2.1.0", itemID: 2)]
+        let asking = SetupSession(app: samples[0])
+        asking.phase = 3
+        asking.text.feed(Data("[3/5] Sign in to Apple\n  Signing in to the App Store\n".utf8))
+        asking.prompt = "enter Apple ID (email address):"
+        let admin = SetupSession(app: samples[0])
+        admin.phase = 4
+        admin.prompt = "Password:"
+        admin.echo = false
+
         let shots: [(String, Page, Health, RunSession?)] = [
             ("decrypt", .decrypt, .ready, nil),
             ("decrypt-running", .decrypt, .ready, running),
@@ -43,6 +54,9 @@ enum Snapshot {
             ("activity", .activity, .ready, nil),
             ("health-ready", .health, .ready, nil),
             ("health-setup", .health, .setupRequired, nil),
+            ("health-setup-no-app", .health, .setupRequired, nil),
+            ("health-setup-asking", .health, .setupRequired, nil),
+            ("health-setup-admin", .health, .setupRequired, nil),
         ]
         Task { @MainActor in
             if live {
@@ -56,6 +70,8 @@ enum Snapshot {
                     model.records = records
                     model.health = health
                 }
+                model.installedApps = name == "health-setup-no-app" ? [] : samples
+                model.setup = name == "health-setup-asking" ? asking : name == "health-setup-admin" ? admin : nil
                 model.page = page
                 model.session = session
                 let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: -20000, y: 0), size: RootView.size),
@@ -72,6 +88,53 @@ enum Snapshot {
                 }
                 window.close()
             }
+            exit(0)
+        }
+    }
+}
+/// Debug builds only: `IPA_LOOM_APP_SETUP_CHECK=script.py` runs the setup session against a
+/// stand-in script instead of the engine, answers each question with "answer-N", prints what
+/// the session saw as JSON, and quits. No window, no account, no real setup.
+/// `IPA_LOOM_APP_SETUP_CHECK=engine` runs the real engine instead (point `IPA_LOOM_DATA_HOME`
+/// at an empty folder) with the first installed App Store app, and cancels at the first
+/// question, which is the Apple sign-in: it checks the real prompts without any account.
+@MainActor
+enum SetupCheck {
+    static func run(script: String) {
+        let engine = script.hasPrefix("engine")
+        let stand = InstalledApp(path: "/Applications/Stand In.app", name: "Stand In", version: "1.0", itemID: 42)
+        guard let app = engine ? InstalledApps.discover().first : stand else {
+            print("No installed App Store app to check with.")
+            exit(1)
+        }
+        let session = SetupSession(app: app)
+        var secrets: [Bool] = []
+        session.start(command: engine ? nil : ["/usr/bin/python3", "-B", script]) {}
+        Task { @MainActor in
+            while session.isRunning {
+                if session.prompt != nil {
+                    secrets.append(!session.echo)
+                    if engine { session.cancel() }
+                    else if session.question == .appleAccount { session.signIn(appleID: "answer-\(secrets.count)", password: "held-password") }
+                    else { session.send("answer-\(secrets.count)") }
+                }
+                if script == "engine-early", session.phase >= 1 {
+                    try? await Task.sleep(for: .seconds(4))
+                    session.cancel()
+                }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            var state = "running"
+            switch session.state {
+            case .passed: state = "passed"
+            case .cancelled: state = "cancelled"
+            case .failed(let reason): state = "failed: " + reason
+            case .running: break
+            }
+            let result: [String: Any] = ["state": state, "phase": session.phase, "asked": session.asked,
+                                         "hidden": secrets, "lines": session.text.lines]
+            let data = try! JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys])
+            print(String(decoding: data, as: UTF8.self))
             exit(0)
         }
     }

@@ -147,8 +147,8 @@ enum Store {
     }
 }
 
-/// Starting the engine. The app passes a target and reads the result; prompts stay in the
-/// terminal command.
+/// Starting the engine. The app passes a target and reads the result. First setup, which
+/// asks questions, goes through `SetupSession` instead.
 enum Engine {
     static func process(_ arguments: [String]) -> Process? {
         guard let root = Paths.engineRoot else { return nil }
@@ -198,6 +198,8 @@ enum Health: Equatable {
     case checking
     case ready
     case setupRequired
+    /// A setup was interrupted and left staged files to clean up.
+    case pendingSetup
     case toolsMissing
     case engineMissing
     case problem(String)

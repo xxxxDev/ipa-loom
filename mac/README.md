@@ -28,7 +28,7 @@ An App Store run started from the app also keeps the encrypted download (`--keep
 
 Not in the app yet:
 
-- First-time setup and Apple sign-in still happen in Terminal. The app opens it for you from Setup & Health.
+- First-time setup runs in the app, from Setup & Health: pick the installed app, then answer the Apple sign-in and the Mac administrator password in the app's own forms. The engine's sign-in and system tools still do the asking, on a private terminal the app stands in front of (`scripts/terminal_bridge.py`); the app passes on what you type and saves none of it. The same setup in Terminal stays available.
 
 ## Layout
 

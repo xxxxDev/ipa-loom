@@ -20,6 +20,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // One look: dark, on the grid backdrop.
         NSApp.appearance = NSAppearance(named: .darkAqua)
         #if DEBUG
+        if let script = ProcessInfo.processInfo.environment["IPA_LOOM_APP_SETUP_CHECK"] {
+            SetupCheck.run(script: script)
+            return
+        }
         if let folder = ProcessInfo.processInfo.environment["IPA_LOOM_APP_SNAPSHOT"] {
             Snapshot.run(model, to: URL(fileURLWithPath: folder))
             return
@@ -55,10 +59,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Quitting during a run stops the engine the way Control-C does and waits for it to
     /// clean up, without blocking the main thread.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let session = model.session, session.isRunning else { return .terminateNow }
-        session.cancel()
+        let run = model.session, setup = model.setup
+        guard run?.isRunning == true || setup?.isRunning == true else { return .terminateNow }
+        run?.cancel()
+        setup?.cancel()
         Task { @MainActor in
-            while session.isRunning { try? await Task.sleep(for: .milliseconds(100)) }
+            while run?.isRunning == true || setup?.isRunning == true { try? await Task.sleep(for: .milliseconds(100)) }
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
