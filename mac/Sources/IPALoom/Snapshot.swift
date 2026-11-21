@@ -78,7 +78,7 @@ enum Snapshot {
                 }
                 model.installedApps = name == "health-setup-no-app" ? [] : samples
                 model.setup = name == "health-setup-asking" ? asking : name == "health-setup-admin" ? admin : name == "health-setup-done" ? done : nil
-                model.updater.show(name == "health-update" ? .available(AvailableUpdate(version: "2026.12.1", page: URL(string: "https://github.com/xxxxDev/ipa-loom/releases/tag/v2026.12.1")!)) : .idle)
+                model.updater.state = (name == "health-update" ? .available(AvailableUpdate(version: "2026.12.1", page: URL(string: "https://github.com/xxxxDev/ipa-loom/releases/tag/v2026.12.1")!)) : .idle)
                 model.page = page
                 model.session = session
                 let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: -20000, y: 0), size: RootView.size),

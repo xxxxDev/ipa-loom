@@ -210,6 +210,7 @@ final class AppModel: ObservableObject {
             // A Mac that was never set up opens on setup: nothing else works before it.
             if health == .setupRequired, session == nil { page = .health }
         }
+        updater.busy = { [weak self] in self?.session?.isRunning == true || self?.setup?.isRunning == true }
         updater.schedule()
     }
 

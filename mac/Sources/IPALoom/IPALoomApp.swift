@@ -32,6 +32,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print(found.map { "\($0.version) \($0.page.absoluteString)" } ?? "none")
             exit(0)
         }
+        if let image = ProcessInfo.processInfo.environment["IPA_LOOM_APP_UPDATE_INSTALL"] {
+            // Installs from a disk image on this Mac instead of a download, with every check
+            // a real update gets, and does not open the new app. Prints why if it refuses.
+            let env = ProcessInfo.processInfo.environment
+            let file = URL(fileURLWithPath: image)
+            let update = AvailableUpdate(version: env["IPA_LOOM_APP_UPDATE_VERSION"] ?? "", page: file,
+                                         image: .init(name: file.lastPathComponent, url: file,
+                                                      sha256: env["IPA_LOOM_APP_UPDATE_SHA256"] ?? ((try? Updater.sha256(of: file)) ?? "")))
+            Task { @MainActor in
+                await model.updater.install(update, image: file, reopen: false)
+                print(model.updater.state)
+                exit(1)
+            }
+            return
+        }
         if let folder = ProcessInfo.processInfo.environment["IPA_LOOM_APP_SNAPSHOT"] {
             Snapshot.run(model, to: URL(fileURLWithPath: folder))
             return
@@ -76,7 +91,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = "This step cannot be stopped safely. Quitting now can leave setup files that need manual recovery."
             alert.addButton(withTitle: "Keep Running")
             alert.addButton(withTitle: "Quit Anyway")
-            if alert.runModal() == .alertFirstButtonReturn { return .terminateCancel }
+            if alert.runModal() == .alertFirstButtonReturn {
+                if model.updater.restarting {
+                    model.updater.restarting = false
+                    model.updater.state = .failed("The update is in place. Quit IPA Loom when setup has finished to start using it.")
+                }
+                return .terminateCancel
+            }
             return .terminateNow
         }
         run?.cancel()

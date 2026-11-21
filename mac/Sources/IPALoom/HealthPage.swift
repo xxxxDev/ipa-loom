@@ -113,13 +113,20 @@ struct UpdateCard: View {
                     Text(detail).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                if updater.available != nil {
-                    Button("View Release") { updater.openPage() }.primaryButtonStyle()
+                if working {
+                    ProgressView().controlSize(.small)
+                } else {
+                    if installs {
+                        Button("Install and Restart") { Task { await updater.install() } }.startButtonStyle()
+                    }
+                    if updater.available != nil {
+                        Button("View Release") { updater.openPage() }.secondaryButtonStyle()
+                    }
+                    Button(updater.state == .checking ? "Checking…" : "Check Now") { Task { await updater.check() } }
+                        .secondaryButtonStyle().disabled(!updater.canCheck || updater.state == .checking)
                 }
-                Button(updater.state == .checking ? "Checking…" : "Check Now") { Task { await updater.check() } }
-                    .secondaryButtonStyle().disabled(!updater.canCheck || updater.state == .checking)
             }
-            if updater.available != nil {
+            if updater.available != nil, !installs, !working {
                 Text("brew upgrade --cask ipa-loom").font(.small.monospaced()).textSelection(.enabled)
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -128,6 +135,16 @@ struct UpdateCard: View {
                 .toggleStyle(.switch).controlSize(.small).disabled(!updater.canCheck)
         }
         .glassCard(padding: 20)
+    }
+
+    private var working: Bool {
+        if case .working = updater.state { return true }
+        return false
+    }
+    /// Whether this copy can install the release it found by itself.
+    private var installs: Bool {
+        if case .available(let update) = updater.state { return update.image != nil && updater.cannotInstall == nil }
+        return false
     }
 
     private var title: String {
@@ -140,7 +157,11 @@ struct UpdateCard: View {
         case .idle: return "Asks GitHub for the list of releases. Nothing about you or your apps is sent."
         case .checking: return "Asking GitHub for the list of releases."
         case .current: return "You have the newest release."
-        case .available: return "You have \(updater.version ?? ""). Update with Homebrew, or download it from the release page. Your setup and Library stay as they are."
+        case .available:
+            let have = "You have \(updater.version ?? "a development build"). "
+            if installs { return have + "IPA Loom downloads it, checks it comes from the same signer, and restarts. Your setup and Library stay as they are." }
+            return have + "Update with Homebrew, or download it from the release page. Your setup and Library stay as they are."
+        case .working(_, let step): return step
         case .failed(let message): return message
         }
     }

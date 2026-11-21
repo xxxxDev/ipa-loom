@@ -32,7 +32,11 @@ Not in the app yet:
 
 ## Updates
 
-The app looks for a newer release once a day, and when you choose Check for Updates in the IPA Loom menu. It asks GitHub for the public list of this project's releases and sends nothing about you or your apps. It does not download or install anything: it shows the new version, the release page, and the Homebrew command. The daily check can be switched off in Setup & Health.
+The app looks for a newer release once a day, and when you choose Check for Updates in the IPA Loom menu. It asks GitHub for the public list of this project's releases and sends nothing about you or your apps. The daily check can be switched off in Setup & Health.
+
+Nothing is downloaded until you choose Install and Restart. The app then downloads the release's disk image and installs it only if every check passes: the image matches the SHA-256 GitHub records for it, and the app inside is signed with the same certificate as the one running and is the version offered. The new app and the old one change places in one step, so there is never a moment without an app, and IPA Loom then restarts. It will not install while a decryption or setup is running.
+
+A copy that cannot do this safely does not try: a build signed ad hoc (which is what `mac/build-app.sh` makes without a certificate), one macOS runs from a temporary place, one in a folder it cannot write or that other accounts can change, or one on another disk than your home folder. It shows the release page and the Homebrew command instead.
 
 An update replaces only the app. Your setup, model and Library stay in the private data folder.
 
@@ -62,6 +66,7 @@ mac/
     LibraryPage.swift     Library and Activity
     HealthPage.swift      Setup & Health
     Update.swift          looks for a newer release
+    UpdateInstall.swift   downloads, checks and installs one
     Snapshot.swift        debug only: draws each page to a PNG file
 ```
 
