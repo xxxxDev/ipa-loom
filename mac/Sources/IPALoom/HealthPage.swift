@@ -39,6 +39,8 @@ struct HealthPage: View {
                 }
                 .glassCard(padding: 20)
 
+                UpdateCard(updater: model.updater)
+
                 Text("Tools, your encrypted account state, the private model and every output stay in the private data folder on this Mac. The app only starts the engine and reads its results.")
                     .font(.small).foregroundStyle(Palette.muted).padding(.horizontal, 4)
             }
@@ -95,6 +97,51 @@ struct HealthPage: View {
         case .toolsMissing: return "Install Apple's Command Line Tools (run xcode-select --install in Terminal), then check again."
         case .engineMissing: return "This copy of the app was built without the engine. Build it again with mac/build-app.sh."
         case .problem(let message): return message
+        }
+    }
+}
+
+/// This app's version, whether a newer release is out, and how to get it.
+struct UpdateCard: View {
+    @ObservedObject var updater: Updater
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.heading).foregroundStyle(updater.available == nil ? Palette.ink : Palette.green)
+                    Text(detail).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                if updater.available != nil {
+                    Button("View Release") { updater.openPage() }.primaryButtonStyle()
+                }
+                Button(updater.state == .checking ? "Checking…" : "Check Now") { Task { await updater.check() } }
+                    .secondaryButtonStyle().disabled(!updater.canCheck || updater.state == .checking)
+            }
+            if updater.available != nil {
+                Text("brew upgrade --cask ipa-loom").font(.small.monospaced()).textSelection(.enabled)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            }
+            Toggle("Check for updates automatically, once a day", isOn: $updater.automatic)
+                .toggleStyle(.switch).controlSize(.small).disabled(!updater.canCheck)
+        }
+        .glassCard(padding: 20)
+    }
+
+    private var title: String {
+        if let update = updater.available { return "Version \(update.version) is available" }
+        return "IPA Loom " + (updater.version ?? "development build")
+    }
+    private var detail: String {
+        if updater.available == nil, !updater.canCheck { return "This copy was not built as an app, so it does not look for updates." }
+        switch updater.state {
+        case .idle: return "Asks GitHub for the list of releases. Nothing about you or your apps is sent."
+        case .checking: return "Asking GitHub for the list of releases."
+        case .current: return "You have the newest release."
+        case .available: return "You have \(updater.version ?? ""). Update with Homebrew, or download it from the release page. Your setup and Library stay as they are."
+        case .failed(let message): return message
         }
     }
 }

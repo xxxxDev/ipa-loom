@@ -27,6 +27,7 @@ struct RootView: View {
                     .buttonStyle(.plain)
                 }
                 Spacer()
+                UpdateChip(updater: model.updater)
                 HealthChip()
             }
             .frame(width: 212)
@@ -103,6 +104,31 @@ struct HealthChip: View {
         case .checking: return "Reading the setup"
         case .setupRequired: return "One-time setup"
         default: return "See Setup & Health"
+        }
+    }
+}
+
+/// A newer release, above the engine's state in the sidebar; nothing when there is none.
+struct UpdateChip: View {
+    @EnvironmentObject var model: AppModel
+    @ObservedObject var updater: Updater
+
+    var body: some View {
+        if let update = updater.available {
+            Button { model.page = .health } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "arrow.down.circle.fill").foregroundStyle(Palette.green)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Update available").font(.small.weight(.semibold))
+                        Text("Version " + update.version).font(.tiny).foregroundStyle(Palette.muted)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .background(Palette.green.opacity(0.10), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 }

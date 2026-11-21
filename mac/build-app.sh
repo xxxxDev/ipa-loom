@@ -15,6 +15,8 @@ root=$(cd "$here/.." && pwd)
 cd "$here"
 
 version=2026.11.13
+# Where the app looks for newer releases (Check for Updates). A fork names its own.
+repo=${IPA_LOOM_REPOSITORY:-xxxxDev/ipa-loom}
 
 if [ "$(uname -s)" != Darwin ] || [ "$(uname -m)" != arm64 ]; then
   echo 'IPA Loom requires an Apple Silicon Mac.' >&2
@@ -49,6 +51,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
  <key>LSMinimumSystemVersion</key><string>14.0</string>
  <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
  <key>NSHighResolutionCapable</key><true/>
+ <key>IPALoomRepository</key><string>$repo</string>
  <key>NSHumanReadableCopyright</key><string>Open source under the MIT License.</string>
 </dict></plist>
 PLIST

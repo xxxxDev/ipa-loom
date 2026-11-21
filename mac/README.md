@@ -22,7 +22,7 @@ Apple's Command Line Tools are enough; Xcode is not needed. The build copies the
 | Decrypt | Paste an App Store link or App ID, or drop an `.ipa` or an installed `.app`. Shows the run's steps and files, and can cancel it. |
 | Library | Every decrypted app still on disk, with its files and a Show in Finder link. |
 | Activity | Every run the engine has recorded. |
-| Setup & Health | Whether the engine is ready, and where your private data is. |
+| Setup & Health | Whether the engine is ready, where your private data is, and whether a newer release is out. |
 
 An App Store run started from the app also keeps the encrypted download (`--keep-encrypted`), so the Library shows both files. Earlier runs, local files and installed apps have no kept original.
 
@@ -30,12 +30,27 @@ Not in the app yet:
 
 - First-time setup runs in the app, from Setup & Health: pick the installed app, then answer the Apple sign-in and the Mac administrator password in the app's own forms. The engine's sign-in and system tools still do the asking, on a private terminal the app stands in front of (`scripts/terminal_bridge.py`); the app passes on what you type and saves none of it. The same setup in Terminal stays available.
 
+## Updates
+
+The app looks for a newer release once a day, and when you choose Check for Updates in the IPA Loom menu. It asks GitHub for the public list of this project's releases and sends nothing about you or your apps. It does not download or install anything: it shows the new version, the release page, and the Homebrew command. The daily check can be switched off in Setup & Health.
+
+An update replaces only the app. Your setup, model and Library stay in the private data folder.
+
+## Release image
+
+```sh
+mac/build-app.sh && mac/make-dmg.sh
+```
+
+`make-dmg.sh` packs the built app into `mac/build/IPA-Loom-<version>-arm64.dmg` and prints its SHA-256. The image is not signed or notarized, so a downloaded copy needs Open Anyway in System Settings on first launch. A fork sets `IPA_LOOM_REPOSITORY=owner/name` when building so its app looks at its own releases.
+
 ## Layout
 
 ```
 mac/
   Package.swift           Swift package, one executable target
   build-app.sh            builds and signs "IPA Loom.app" into mac/build/
+  make-dmg.sh             packs the built app into a disk image for a release
   AppIcon.svg             icon source; Resources/AppIcon.icns is made from it
   Sources/IPALoom/
     IPALoomApp.swift      entry point, window and menus
@@ -46,6 +61,7 @@ mac/
     DecryptPage.swift     link field, drop area and the run view
     LibraryPage.swift     Library and Activity
     HealthPage.swift      Setup & Health
+    Update.swift          looks for a newer release
     Snapshot.swift        debug only: draws each page to a PNG file
 ```
 

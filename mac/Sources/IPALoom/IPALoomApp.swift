@@ -24,6 +24,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SetupCheck.run(script: script)
             return
         }
+        if let file = ProcessInfo.processInfo.environment["IPA_LOOM_APP_UPDATE_CHECK"] {
+            // Reads a saved list of releases instead of asking GitHub, prints the answer and quits.
+            let current = ProcessInfo.processInfo.environment["IPA_LOOM_APP_UPDATE_CURRENT"] ?? ""
+            let data = (try? Data(contentsOf: URL(fileURLWithPath: file))) ?? Data()
+            let found = UpdateCheck.newest(in: data, current: current, repo: "xxxxDev/ipa-loom")
+            print(found.map { "\($0.version) \($0.page.absoluteString)" } ?? "none")
+            exit(0)
+        }
         if let folder = ProcessInfo.processInfo.environment["IPA_LOOM_APP_SNAPSHOT"] {
             Snapshot.run(model, to: URL(fileURLWithPath: folder))
             return
@@ -80,6 +88,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateLater
     }
 
+    /// Shows the answer where the rest of the app's state is: Setup & Health.
+    @objc func checkForUpdates(_ sender: Any?) {
+        model.page = .health
+        Task { await model.updater.check() }
+    }
+
     /// The menus a window with a text field needs: the app's own, Edit and Window.
     private static func menu() -> NSMenu {
         let main = NSMenu()
@@ -97,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         add("IPA Loom", [
             item("About IPA Loom", #selector(NSApplication.orderFrontStandardAboutPanel(_:)), ""),
+            item("Check for Updates…", #selector(AppDelegate.checkForUpdates(_:)), ""),
             .separator(),
             item("Hide IPA Loom", #selector(NSApplication.hide(_:)), "h"),
             item("Hide Others", #selector(NSApplication.hideOtherApplications(_:)), "h", [.command, .option]),

@@ -183,6 +183,7 @@ final class AppModel: ObservableObject {
     @Published var session: RunSession?
     @Published var setup: SetupSession?
     @Published var installedApps: [InstalledApp] = []
+    let updater = Updater()
     /// Sample data for the layout pictures a debug build draws; never set in the real app.
     var sampleFiles = false
 
@@ -209,6 +210,7 @@ final class AppModel: ObservableObject {
             // A Mac that was never set up opens on setup: nothing else works before it.
             if health == .setupRequired, session == nil { page = .health }
         }
+        updater.schedule()
     }
 
     func refresh() {
