@@ -130,7 +130,9 @@ extension Updater {
 
             let image = dir.appendingPathComponent("update.dmg")
             step("Downloading \(wanted.name)…")
-            let session = URLSession(configuration: .ephemeral)
+            let settings = URLSessionConfiguration.ephemeral
+            settings.timeoutIntervalForResource = 1800
+            let session = URLSession(configuration: settings)
             defer { session.finishTasksAndInvalidate() }
             let (file, response) = try await session.download(from: wanted.url)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else {
@@ -254,6 +256,7 @@ extension Updater {
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
+    /// Runs a system tool and waits for it; one that has not finished after ten minutes is stopped.
     nonisolated static func run(_ tool: String, _ arguments: [String]) async throws {
         try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, Error>) in
             let process = Process()
@@ -266,7 +269,8 @@ extension Updater {
                 if process.terminationStatus == 0 { done.resume() }
                 else { done.resume(throwing: Failure("\((tool as NSString).lastPathComponent) failed (\(process.terminationStatus))")) }
             }
-            do { try process.run() } catch { done.resume(throwing: error) }
+            do { try process.run() } catch { done.resume(throwing: error); return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 600) { if process.isRunning { process.terminate() } }
         }
     }
 
