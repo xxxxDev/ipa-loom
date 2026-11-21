@@ -65,13 +65,6 @@ extension Updater {
     /// Downloads, checks and stages the update, then quits so the script can swap it in.
     func install() async {
         guard case .available(let update) = state else { return }
-        await install(update, image: nil, reopen: true)
-    }
-
-    /// `image`: an image already on disk instead of the download (debug check).
-    /// `reopen`: false exits at once and keeps the script from opening the new app (debug check).
-    func install(_ update: AvailableUpdate, image local: URL?, reopen: Bool) async {
-        if case .working = state { return }
         if busy() { state = .failed("A decryption or setup is running. Install the update when it has finished."); return }
         if let reason = cannotInstall { state = .failed(reason); return }
         guard let wanted = update.image, let requirement = Self.ownRequirement() else {
@@ -94,18 +87,14 @@ extension Updater {
             try Self.ownDirectory(staged.deletingLastPathComponent())
 
             let image = dir.appendingPathComponent("update.dmg")
-            if let local {
-                try fm.copyItem(at: local, to: image)
-            } else {
-                step("Downloading \(wanted.name)…")
-                let session = URLSession(configuration: .ephemeral)
-                defer { session.finishTasksAndInvalidate() }
-                let (file, response) = try await session.download(from: wanted.url)
-                guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                    throw Failure("the download answered \((response as? HTTPURLResponse)?.statusCode ?? 0)")
-                }
-                try fm.moveItem(at: file, to: image)
+            step("Downloading \(wanted.name)…")
+            let session = URLSession(configuration: .ephemeral)
+            defer { session.finishTasksAndInvalidate() }
+            let (file, response) = try await session.download(from: wanted.url)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                throw Failure("the download answered \((response as? HTTPURLResponse)?.statusCode ?? 0)")
             }
+            try fm.moveItem(at: file, to: image)
 
             step("Checking the download…")
             let digest = try await Task.detached { try Self.sha256(of: image) }.value
@@ -151,7 +140,7 @@ extension Updater {
             }
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
-            process.arguments = [script.path, String(ProcessInfo.processInfo.processIdentifier), dir.path, dest.path, reopen ? "open" : "no"]
+            process.arguments = [script.path, String(ProcessInfo.processInfo.processIdentifier), dir.path, dest.path]
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = FileHandle.nullDevice
             process.standardError = FileHandle.nullDevice
@@ -163,7 +152,7 @@ extension Updater {
             // Quit from the run loop, not from inside this task, which the app's own
             // quit handling would otherwise wait on.
             restarting = true
-            if reopen { NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0) } else { exit(0) }
+            NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
         } catch {
             try? await Self.run("/usr/bin/hdiutil", ["detach", "-force", dir.appendingPathComponent("mount").path])
             try? fm.removeItem(at: dir)
@@ -176,12 +165,11 @@ extension Updater {
     /// app does not quit, the folder stays for a later launch to clear.
     private static let finishScript = """
     #!/bin/sh
-    pid=$1; dir=$2; dest=$3; reopen=$4
+    pid=$1; dir=$2; dest=$3
     i=0
     while kill -0 "$pid" 2>/dev/null; do i=$((i+1)); [ "$i" -gt 6000 ] && exit 1; sleep 0.1; done
     cd / && rm -rf "$dir"
-    [ "$reopen" = "open" ] && open "$dest"
-    exit 0
+    open "$dest"
     """
 
     /// A directory of this user's own that nobody else can read or write.

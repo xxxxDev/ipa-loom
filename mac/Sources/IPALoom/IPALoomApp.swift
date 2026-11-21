@@ -20,33 +20,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // One look: dark, on the grid backdrop.
         NSApp.appearance = NSAppearance(named: .darkAqua)
         #if DEBUG
-        if let script = ProcessInfo.processInfo.environment["IPA_LOOM_APP_SETUP_CHECK"] {
-            SetupCheck.run(script: script)
-            return
-        }
-        if let file = ProcessInfo.processInfo.environment["IPA_LOOM_APP_UPDATE_CHECK"] {
-            // Reads a saved list of releases instead of asking GitHub, prints the answer and quits.
-            let current = ProcessInfo.processInfo.environment["IPA_LOOM_APP_UPDATE_CURRENT"] ?? ""
-            let data = (try? Data(contentsOf: URL(fileURLWithPath: file))) ?? Data()
-            let found = UpdateCheck.newest(in: data, current: current, repo: "xxxxDev/ipa-loom")
-            print(found.map { "\($0.version) \($0.page.absoluteString)" } ?? "none")
-            exit(0)
-        }
-        if let image = ProcessInfo.processInfo.environment["IPA_LOOM_APP_UPDATE_INSTALL"] {
-            // Installs from a disk image on this Mac instead of a download, with every check
-            // a real update gets, and does not open the new app. Prints why if it refuses.
-            let env = ProcessInfo.processInfo.environment
-            let file = URL(fileURLWithPath: image)
-            let update = AvailableUpdate(version: env["IPA_LOOM_APP_UPDATE_VERSION"] ?? "", page: file,
-                                         image: .init(name: file.lastPathComponent, url: file,
-                                                      sha256: env["IPA_LOOM_APP_UPDATE_SHA256"] ?? ((try? Updater.sha256(of: file)) ?? "")))
-            Task { @MainActor in
-                await model.updater.install(update, image: file, reopen: false)
-                print(model.updater.state)
-                exit(1)
-            }
-            return
-        }
         if let folder = ProcessInfo.processInfo.environment["IPA_LOOM_APP_SNAPSHOT"] {
             Snapshot.run(model, to: URL(fileURLWithPath: folder))
             return

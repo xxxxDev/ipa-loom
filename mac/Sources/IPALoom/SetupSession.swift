@@ -172,14 +172,14 @@ final class SetupSession: ObservableObject {
         return result
     }
 
-    func start(command override: [String]? = nil, onFinish: @escaping () -> Void) {
+    func start(onFinish: @escaping () -> Void) {
         guard let root = Paths.engineRoot else {
             state = .failed("The engine is missing from this app.")
             return
         }
         self.onFinish = onFinish
         let python = "/usr/bin/python3"
-        let command = override ?? [python, "-B", root.appendingPathComponent("scripts/entry.py").path, "--setup"]
+        let command = [python, "-B", root.appendingPathComponent("scripts/entry.py").path, "--setup"]
         let process = Process()
         process.executableURL = URL(fileURLWithPath: python)
         process.arguments = ["-B", root.appendingPathComponent("scripts/terminal_bridge.py").path] + command
