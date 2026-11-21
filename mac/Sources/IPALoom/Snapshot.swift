@@ -50,6 +50,7 @@ enum Snapshot {
         let shots: [(String, Page, Health, RunSession?)] = [
             ("decrypt", .decrypt, .ready, nil),
             ("decrypt-running", .decrypt, .ready, running),
+            ("decrypt-setup", .decrypt, .setupRequired, nil),
             ("library", .library, .ready, nil),
             ("activity", .activity, .ready, nil),
             ("health-ready", .health, .ready, nil),

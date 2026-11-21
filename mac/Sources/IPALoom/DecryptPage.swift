@@ -230,11 +230,19 @@ struct StepMark: View {
 struct NotReadyNotice: View {
     @EnvironmentObject var model: AppModel
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("IPA Loom is not ready to decrypt yet", systemImage: "exclamationmark.triangle.fill")
-                .font(.heading).foregroundStyle(Palette.amber)
-            Text("Open Setup & Health to see what is missing and how to finish it.").foregroundStyle(Palette.muted)
-            Button("Open Setup & Health") { model.page = .health }.primaryButtonStyle()
+        VStack(alignment: .leading, spacing: 12) {
+            if model.health == .setupRequired {
+                Label("Set up IPA Loom first", systemImage: "sparkles")
+                    .font(.heading).foregroundStyle(Palette.green)
+                Text("A one-time setup prepares the tools, signs in to the App Store and builds what decryption needs. It takes a few minutes.")
+                    .foregroundStyle(Palette.muted)
+                Button("Start Setup") { model.page = .health }.startButtonStyle()
+            } else {
+                Label("IPA Loom is not ready to decrypt yet", systemImage: "exclamationmark.triangle.fill")
+                    .font(.heading).foregroundStyle(Palette.amber)
+                Text("Open Setup & Health to see what is missing and how to finish it.").foregroundStyle(Palette.muted)
+                Button("Open Setup & Health") { model.page = .health }.primaryButtonStyle()
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCard()

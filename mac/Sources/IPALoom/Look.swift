@@ -35,6 +35,9 @@ extension View {
     }
 
     /// The page's main action: blue-tinted glass.
+    /// The green button that begins first setup.
+    func startButtonStyle() -> some View { buttonStyle(StartButtonStyle()) }
+
     @ViewBuilder func primaryButtonStyle() -> some View {
         if #available(macOS 26, *), !GlassLook.plain {
             self.buttonStyle(.glass(.regular.tint(Palette.blue.opacity(0.6)).interactive())).foregroundStyle(.white)
@@ -176,5 +179,15 @@ extension Date {
         if calendar.isDateInToday(self) { return "Today " + time }
         if calendar.isDateInYesterday(self) { return "Yesterday " + time }
         return formatted(date: .abbreviated, time: .shortened)
+    }
+}
+
+/// A solid green capsule: the one action a Mac that was never set up should take.
+struct StartButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.heading).foregroundStyle(.white)
+            .padding(.horizontal, 22).padding(.vertical, 10)
+            .background(Color(red: 0.12, green: 0.64, blue: 0.33).opacity(configuration.isPressed ? 0.75 : 1), in: Capsule())
     }
 }
