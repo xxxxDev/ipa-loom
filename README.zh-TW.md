@@ -68,6 +68,10 @@ IPA Loom 把 IPA 下載、解密、驗證與清理整合在一台 Apple Silicon 
 
 首次使用會建置鎖定工具，並引導 Apple 登入、對應 App 檢查、模型復原與驗證。ipatool 由原始碼編譯；UnfairPlay 是以雜湊鎖定的預編執行檔，模型設定時以管理員權限（`sudo`）執行一次。Apple 密碼、2FA、鑰匙圈授權與 macOS 管理員提示都在本機處理。產生的解鎖金鑰在設定後存入你的鑰匙圈。設定結束時會把你選的那支 App 解密後留作第一個成果，並印出它的路徑。見[首次設定](docs/SETUP.md)。
 
+### Mac App（預覽）
+
+想用視窗而不是終端機？雙擊 `ipa-loom-app.command` 就會建置並開啟 IPA Loom App。它跑的是同一套引擎，並把解密好的 App 列在資料庫頁。首次設定目前仍在終端機完成。詳見 [mac/README.md](mac/README.md)（英文）。
+
 ## 使用方式
 
 再次執行同一個指令並給它目標，可當參數或在提示輸入。App Store App 有三種方式可以解密：App Store 連結、數字 App ID，或（已安裝在這台 Mac 時）它的 `.app` 路徑。`.app` 路徑適用於已安裝的 iPhone／iPad App，不分來源，包含 TestFlight 測試版；既有 `.ipa` 也可以：
