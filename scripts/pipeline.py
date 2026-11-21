@@ -188,8 +188,9 @@ class Pipeline:
             os.write(writer,secret);os.close(writer);writer=None
             env['DEV_IPA_PASSPHRASE_FD']=str(reader);fds=(reader,)
         code=130
-        # Without a terminal there is nothing to prompt on, so the tool gets its own process
-        # group: an interrupt (the app's Cancel) can then confirm it stopped and clean up.
+        # When standard input is not a terminal there is nothing to answer a prompt with, so
+        # the tool gets its own process group: an interrupt (the app's Cancel, or a run with
+        # input redirected) can then confirm it stopped and clean up.
         try:
             with (self.work/'private-logs'/(stage+'.stdout')).open('x') as out,(self.work/'private-logs'/(stage+'.stderr')).open('x') as err:
                 stdout=subprocess.DEVNULL if quiet else (None if interactive else out)
