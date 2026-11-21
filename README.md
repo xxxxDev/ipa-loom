@@ -68,6 +68,10 @@ Download and unzip the source, open its folder, and double-click `ipa-loom.comma
 
 First use builds pinned tools and guides Apple login, matching-app checks, model recovery, and verification. ipatool is built from source; UnfairPlay is a hash-pinned prebuilt binary, run once with administrator rights (`sudo`) during model setup. Apple password, 2FA, Keychain authorization, and the macOS administrator prompt are handled locally. The generated unlock key is saved in your Keychain after setup. Setup ends by keeping the app you chose decrypted as your first result and printing its path. See [first-run setup](docs/SETUP.md).
 
+### Mac app (preview)
+
+Prefer a window to a terminal? Double-click `ipa-loom-app.command` to build and open the IPA Loom app. It runs the same engine and shows your decrypted apps in a Library. First-time setup still happens in Terminal for now. See [mac/README.md](mac/README.md).
+
 ## Use it
 
 Run the same command and give a target, as an argument or at the prompt. An App Store app can be decrypted three ways: its App Store link, its numeric App ID, or, when it is installed on this Mac, its `.app` path. The `.app` path route accepts an installed iPhone or iPad app from either source, TestFlight betas included; an existing `.ipa` works too:
