@@ -27,3 +27,4 @@ __pycache__/
 *.recovery
 *.keychain-db
 *.log
+mac/signing.env

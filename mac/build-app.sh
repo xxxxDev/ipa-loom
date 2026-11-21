@@ -8,7 +8,12 @@
 # model or IPA: those stay in the private data folder, the same one the terminal command
 # uses. The Command Line Tools are enough; Xcode is not needed.
 #
-# The signature is ad hoc: it is made on this Mac for this Mac.
+# The signature is ad hoc by default: made on this Mac, for this Mac. A release is signed
+# with the project's own certificate instead, named in mac/signing.env (not in git):
+#
+#   IPALOOM_SIGN_IDENTITY=<SHA-1 of the certificate>
+#   IPALOOM_SIGN_KEYCHAIN=<keychain that holds it>              (optional)
+#   IPALOOM_SIGN_KEYCHAIN_PASSWORD_FILE=<file with its password> (optional)
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/.." && pwd)
@@ -65,8 +70,27 @@ for part in scripts config patches native licenses ipa-loom.command LICENSE THIR
 done
 find "$app/Contents/Resources/engine" \( -name '__pycache__' -o -name '.DS_Store' \) -prune -exec rm -rf {} +
 
-echo "== sign (ad hoc, hardened runtime)"
-codesign --force --options runtime --sign - --identifier io.ipaloom.app "$app"
+identity=-
+keychain=
+if [ -f "$here/signing.env" ]; then
+  . "$here/signing.env"
+  identity=${IPALOOM_SIGN_IDENTITY:--}
+  keychain=${IPALOOM_SIGN_KEYCHAIN:-}
+fi
+if [ "$identity" = - ]; then
+  echo "== sign (ad hoc, hardened runtime)"
+  codesign --force --options runtime --sign - --identifier io.ipaloom.app "$app"
+else
+  echo "== sign (project certificate, hardened runtime)"
+  if [ -n "$keychain" ]; then
+    if [ -n "${IPALOOM_SIGN_KEYCHAIN_PASSWORD_FILE:-}" ]; then
+      security unlock-keychain -p "$(cat "$IPALOOM_SIGN_KEYCHAIN_PASSWORD_FILE")" "$keychain"
+    fi
+    codesign --force --options runtime --sign "$identity" --keychain "$keychain" --identifier io.ipaloom.app "$app"
+  else
+    codesign --force --options runtime --sign "$identity" --identifier io.ipaloom.app "$app"
+  fi
+fi
 codesign --verify --strict --deep "$app"
 echo "built: $app"
 echo "Not installed or opened. To try it: open \"$app\""

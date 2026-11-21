@@ -13,7 +13,7 @@ mac/build-app.sh
 open "mac/build/IPA Loom.app"
 ```
 
-Apple's Command Line Tools are enough; Xcode is not needed. The build copies the engine (`scripts`, `config`, `patches`, `native`, `licenses`) into the app, so the app keeps working if this folder moves. The signature is ad hoc: made on this Mac, for this Mac.
+Apple's Command Line Tools are enough; Xcode is not needed. The build copies the engine (`scripts`, `config`, `patches`, `native`, `licenses`) into the app, so the app keeps working if this folder moves. The signature is ad hoc by default: made on this Mac, for this Mac. A release build is signed with the project's own self-signed certificate when `mac/signing.env` (kept out of git) names one; the variables are listed at the top of `mac/build-app.sh`. It is not a Developer ID and the app is not notarized.
 
 ## What it does today
 
