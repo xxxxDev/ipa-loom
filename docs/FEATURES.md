@@ -9,6 +9,7 @@
 - Staged rollback, interrupted-setup recovery, and preview-first cleanup commands.
 - Read-only packaging of installed iOS/TestFlight apps, source-change detection, and per-run records; temporary copies follow the same cleanup rules as downloaded IPAs.
 - Metadata-based output filenames with an optional suffix.
+- Optional retention of the encrypted App Store download next to the decrypted output (`--keep-encrypted`).
 - Stable upstream release detection, with separate temporary builds and checks before any adoption.
 
 # Limits

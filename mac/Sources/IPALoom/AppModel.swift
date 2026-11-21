@@ -54,6 +54,8 @@ final class RunSession: ObservableObject {
 
     func start(suffix: String?, onFinish: @escaping () -> Void) {
         var arguments = [target]
+        // Only an App Store download has an encrypted original the user does not already hold.
+        if kind == .store { arguments.append("--keep-encrypted") }
         if let suffix, !suffix.isEmpty { arguments += ["--suffix", suffix] }
         guard let process = Engine.process(arguments) else {
             state = .failed("The engine is missing from this app.")

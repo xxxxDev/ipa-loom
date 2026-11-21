@@ -7,6 +7,7 @@ IPA Loom: ./ipa-loom.command [Store URL | App ID | local.ipa | installed.app]
   --reset [--apply]       Remove runtime and Keychain item
   --login         Refresh authentication
   --suffix TAG    Output filename label
+  --keep-encrypted  Also keep the encrypted App Store download
 
 Installed iOS/TestFlight app: ./ipa-loom.command "/Applications/Example.app"
 Requires an existing model. Copies the app; does not modify or launch it.

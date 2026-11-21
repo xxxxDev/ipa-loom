@@ -211,7 +211,7 @@ class Pipeline:
     def close(self,passed):
         assert_quiescent(self.data)
         # Only this newly-created run's disposable directories; never shared .local.
-        for name in (['tmp','input'] if passed else ['tmp','input','output']):
+        for name in (['tmp','input'] if passed else ['tmp','input','output','encrypted']):
             path=safe(self.work/name)
             if path.exists():
                 if not shutil.rmtree.avoids_symlink_attacks:raise RuntimeError('Safe deletion unavailable.')
@@ -254,6 +254,7 @@ def parse_arguments(arguments=None):
     parser.add_argument('target',nargs='?')
     parser.add_argument('--suffix',help='Optional filename suffix (not a signing identity).')
     parser.add_argument('--login',action='store_true',help='Explicitly refresh Apple authentication in your Terminal.')
+    parser.add_argument('--keep-encrypted',action='store_true',help='Also keep the encrypted IPA downloaded from the App Store.')
     args=parser.parse_args(arguments)
     if args.suffix is not None:
         try:
@@ -319,6 +320,11 @@ def main():
                     raise RuntimeError('Decryption failed; private diagnostics were retained.')
                 run.data['verification']=verify_result(info,output,report);save(run.record,run.data)
                 print('  ✓ Verifying the decryption',flush=True)
+                if args.keep_encrypted and target[0]=='store':
+                    # The download as Apple delivered it: still encrypted, with this account's license files.
+                    kept=safe(run.work/'encrypted');kept.mkdir(mode=0o700)
+                    encrypted=kept/output_name(ipa,'encrypted')
+                    os.replace(ipa,encrypted);run.data['encrypted_filename']=encrypted.name;save(run.record,run.data)
             passed=True
         except BaseException as e:
             run.data['failure_type']=type(e).__name__
@@ -340,6 +346,8 @@ def main():
         if passed and target:
             print('\n✓ Done')
             print('  Decrypted app:  '+str(output))
+            if run.data.get('encrypted_filename'):
+                print('  Encrypted app:  '+str(encrypted))
             print('  plaintext_verified=true; not re-signed or installation-tested.')
 
 if __name__=='__main__':

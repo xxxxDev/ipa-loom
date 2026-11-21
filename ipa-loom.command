@@ -30,6 +30,7 @@ case "${1-}" in
         --suffix) _ipa_loom_suffix=1; _ipa_loom_has_suffix=1 ;;
         --suffix=*) check_suffix "${_ipa_loom_arg#--suffix=}"; _ipa_loom_has_suffix=1 ;;
         --login) _ipa_loom_login=1 ;;
+        --keep-encrypted) ;;
         -*) echo "Unknown or misplaced option: $_ipa_loom_arg" >&2; exit 2 ;;
         *) _ipa_loom_target=$((_ipa_loom_target + 1)) ;;
       esac

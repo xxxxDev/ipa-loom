@@ -24,10 +24,11 @@ Apple's Command Line Tools are enough; Xcode is not needed. The build copies the
 | Activity | Every run the engine has recorded. |
 | Setup & Health | Whether the engine is ready, and where your private data is. |
 
+An App Store run started from the app also keeps the encrypted download (`--keep-encrypted`), so the Library shows both files. Earlier runs, local files and installed apps have no kept original.
+
 Not in the app yet:
 
 - First-time setup and Apple sign-in still happen in Terminal. The app opens it for you from Setup & Health.
-- The encrypted original is not kept after a run, so the Library shows it as not kept.
 
 ## Layout
 

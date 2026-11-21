@@ -78,7 +78,7 @@ IPA Loom 把 IPA 下載、解密、驗證與清理整合在一台 Apple Silicon 
 
 Store 目標會在解密前檢查工作階段並下載。本機 IPA 與已安裝 App 目標略過這兩步。之後的執行沿用已設定的模型與鑰匙圈項目；重新進行 Apple 認證或鑰匙圈存取時仍可能需要你輸入。相對路徑會以啟動器所在資料夾為基準，所以本機 IPA 請用絕對路徑。
 
-輸出檔名為 `StoreName_Version_loom.ipa`。Store 名稱取自 IPA 中繼資料，缺少時以 App 名稱備用。`--suffix` 只改檔名標籤，不改程式碼簽章。終端機會印出輸出位置。
+輸出檔名為 `StoreName_Version_loom.ipa`。Store 名稱取自 IPA 中繼資料，缺少時以 App 名稱備用。`--suffix` 只改檔名標籤，不改程式碼簽章。終端機會印出輸出位置。Store 目標加上 `--keep-encrypted` 會另外保留下載到的加密檔，檔名為 `StoreName_Version_encrypted.ipa`，放在輸出旁邊；裡面仍有你帳號的授權檔，請勿外流。
 
 ### 已安裝的 App（App Store 或 TestFlight）
 

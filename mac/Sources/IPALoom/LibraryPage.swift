@@ -66,7 +66,7 @@ struct LibraryCard: View {
                 if record.verified { Tag(text: "Verified", color: Palette.green) }
             }
             FileRow(title: "Encrypted (original)", file: model.encrypted(of: record),
-                    missing: record.inputKind == "installed-app" ? "Not available: read from the installed app" : "Not kept for this run",
+                    missing: record.inputKind == "installed-app" ? "Not available: read from the installed app" : record.inputKind == "file" ? "Your own file, not copied" : "Not kept for this run",
                     encrypted: true)
             FileRow(title: "Decrypted", file: model.output(of: record), missing: "Removed", encrypted: false)
         }

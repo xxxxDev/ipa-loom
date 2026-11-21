@@ -82,7 +82,7 @@ Run the same command and give a target, as an argument or at the prompt. An App 
 
 Store targets check the session and download before decryption. Local IPA and installed-app targets skip those two steps. Later runs reuse the configured model and Keychain item; renewed Apple authentication or Keychain access may still need your input. A relative path is read from the launcher's own folder, so give a local IPA an absolute path.
 
-Output uses `StoreName_Version_loom.ipa`. The Store name comes from IPA metadata, with app-name fallbacks. `--suffix` changes only the filename label, not code signing. The terminal prints the output location.
+Output uses `StoreName_Version_loom.ipa`. The Store name comes from IPA metadata, with app-name fallbacks. `--suffix` changes only the filename label, not code signing. The terminal prints the output location. For a Store target, `--keep-encrypted` also keeps the encrypted download as `StoreName_Version_encrypted.ipa` beside the output; it still carries your account's license files, so keep it private.
 
 ### Installed apps (App Store or TestFlight)
 

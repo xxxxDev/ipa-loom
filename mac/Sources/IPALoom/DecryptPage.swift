@@ -153,7 +153,7 @@ struct RunView: View {
                         Text("Files").font(.headline)
                         let record = session.record
                         FileRow(title: "Encrypted (original)", file: record.flatMap(model.encrypted),
-                                missing: session.kind == .installedApp ? "Not available: read from the installed app" : "Not kept by this version",
+                                missing: session.kind == .store ? (session.isRunning ? "Kept when the run passes" : "Not kept") : session.kind == .file ? "Your own file, not copied" : "Not available: read from the installed app",
                                 encrypted: true)
                         FileRow(title: "Decrypted", file: session.state == .passed ? record.flatMap(model.output) : nil,
                                 missing: record?.outputFilename ?? "Pending", encrypted: false)
