@@ -22,6 +22,10 @@ IPA Loom 把 IPA 下載、解密、驗證與清理整合在一台 Apple Silicon 
 
 它串接 [ipatool](https://github.com/majd/ipatool)（Apple 認證與個人化下載）與 [UnfairPlay](https://github.com/DrWhax/unfairplay)（復原解密所需的本機 enrollment 模型）。Loom 另外負責本機憑證保存、輸出命名、驗證、復原與清理。它不自行實作 FairPlay 解密演算法，也不會把單純的 Store 連結變成免憑證下載。
 
+## 適用用途
+
+IPA Loom 用於安全研究、互通與相容性分析，以及檢視你自己開發或有權檢視的 App。請勿用於盜版，也不要把解密後的 App 提供給他人。解密 App 可能受 Apple 的條款、開發者的授權或適用於你的法律限制；你的用途是否允許，請自行確認。IPA Loom 不會檢查這些。
+
 ## 功能
 
 - 單一啟動器，涵蓋首次設定，以及之後的 Store 連結、App ID、本機 IPA 與已安裝 iOS App 執行。

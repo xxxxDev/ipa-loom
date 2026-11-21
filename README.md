@@ -22,6 +22,10 @@ IPA Loom brings IPA download, decryption, verification, and cleanup together on 
 
 It connects [ipatool](https://github.com/majd/ipatool) for Apple authentication and personalized downloads with [UnfairPlay](https://github.com/DrWhax/unfairplay) to recover the local enrollment model needed for decryption. Loom adds local credential storage, output naming, verification, recovery, and cleanup. It does not implement its own FairPlay decryption algorithm, and it does not turn a bare Store link into a credential-free download.
 
+## Intended use
+
+IPA Loom is for security research, interoperability and compatibility analysis, and inspecting apps you developed or are authorized to inspect. Do not use it to pirate apps or to share a decrypted app with anyone else. Decrypting an app may be restricted by Apple's terms, the developer's license, or the laws that apply to you; whether your use is allowed is for you to check. IPA Loom does not check any of this.
+
 ## Features
 
 - One launcher for first setup and for later Store-link, App ID, local-IPA, and installed iOS-app runs.
