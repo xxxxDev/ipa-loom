@@ -4,16 +4,16 @@
     "sha256": "efb87ff28af9a188d0536ef5d42e63dd52ba8263cd7344a993cc48dd11dedb6a"
   },
   "ipatool": {
-    "url": "https://api.github.com/repos/majd/ipatool/tarball/72c47d538b726df397fbf17bb3af809d69ef51b7",
-    "sha256": "3399b4088017f91d565c20d6a1077fbe041077867c860f17d34fe399f5041b18",
-    "version": "v2.8.0",
+    "url": "https://api.github.com/repos/majd/ipatool/tarball/3e84853e2e5d60540a5022b64895d496910144eb",
+    "sha256": "90d86db5fc92ceeaa210d30de20b0065a5abeaf5de06db64700579a5d1809d61",
+    "version": "v2.8.1",
     "repository": "majd/ipatool",
-    "commit": "72c47d538b726df397fbf17bb3af809d69ef51b7"
+    "commit": "3e84853e2e5d60540a5022b64895d496910144eb"
   },
   "unfairplay": {
-    "url": "https://github.com/DrWhax/unfairplay/releases/download/v0.2.1/unfairplay-v0.2.1-darwin-arm64.tar.gz",
-    "sha256": "34bea6c84adc0140c7e11367885ebd7ee2d9408958191c04f8326bc1efbe5ed0",
-    "version": "v0.2.1",
+    "url": "https://github.com/DrWhax/unfairplay/releases/download/v0.4.0/unfairplay-v0.4.0-darwin-arm64.tar.gz",
+    "sha256": "98e7df0dfcc07f984bddf8afac7a260b8dbbf96646de529461c78d17d0d4bd51",
+    "version": "v0.4.0",
     "repository": "DrWhax/unfairplay"
   },
   "patch_sha256": "e7bd6d6d14701da071fc5e44f2608ffa48aaec1983c281d4d66505a2c3d06523"
